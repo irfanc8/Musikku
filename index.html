@@ -31,6 +31,7 @@
 <nav class="tabs">
   <button class="tab active" data-tab="beranda">Beranda</button>
   <button class="tab" data-tab="jelajah">Jelajah</button>
+  <button class="tab" data-tab="soundcloud">SoundCloud</button>
   <button class="tab" data-tab="playlist">Playlist</button>
   <button class="tab" data-tab="riwayat">Riwayat</button>
   <button class="tab" data-tab="unduhan">Unduhan <span id="dlCount" class="badge">0</span></button>
@@ -47,8 +48,6 @@
       <h2 class="section-title">🎵 Koleksi Pilihan</h2>
       <div id="collectionsHome"></div>
       <p class="hint">Tidak ketemu lagunya di koleksi? Kotak pencarian di atas mencari seluruh arsip — lagu Indo apa pun yang ada di sana, dari yang terkenal sampai yang kurang dikenal, bisa dicari lewat pencarian.</p>
-      <h2 class="section-title">🎧 Jelajahi Genre</h2>
-      <div class="chips wrap" id="genreChipsHome"></div>
       <h2 class="section-title">🕘 Baru Diputar</h2>
       <div id="homeRecent" class="list"></div>
     </div>
@@ -65,6 +64,16 @@
   <section id="tab-jelajah" class="tab-page">
     <div id="statusLine" class="status">Memuat lagu pilihan…</div>
     <div id="results" class="list"></div>
+  </section>
+
+  <section id="tab-soundcloud" class="tab-page">
+    <div class="search-row sc-search-row">
+      <input id="scSearchInput" type="search" placeholder="Cari lagu apa saja di SoundCloud…" autocomplete="off">
+      <button id="scSearchBtn" class="btn-primary">Cari</button>
+    </div>
+    <p class="hint">Streaming langsung dari SoundCloud — lagu apa pun yang ada di sana bisa dicari dan diputar. Ketuk hasil untuk memutar.</p>
+    <div id="scStatus" class="status"></div>
+    <div id="scResults" class="list"></div>
   </section>
 
   <section id="tab-playlist" class="tab-page">
@@ -111,10 +120,19 @@
     <h3>Sumber lagu online</h3>
     <p>Katalog online berasal dari <strong>Internet Archive</strong> (archive.org) — jutaan rekaman musik bebas, Creative Commons, dan rekaman live. Lagu pop arus utama yang masih berhak cipta <strong>tidak</strong> tersedia gratis di sini; untuk lagu seperti itu, gunakan tombol Impor File dan putar koleksimu sendiri.</p>
     <p>Koleksi Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, dan Reggae Indo adalah kompilasi lagu Indonesia yang diunggah pengguna ke Internet Archive — lagunya bisa diputar full, tetapi ketersediaannya mengikuti arsip dan dapat berubah sewaktu-waktu.</p>
+    <h3>SoundCloud</h3>
+    <p>Tab <strong>SoundCloud</strong> mencari lagu apa pun yang ada di SoundCloud dan memutarnya langsung (streaming HLS). Lagu SoundCloud tidak bisa diunduh — hanya streaming.</p>
     <h3>Offline</h3>
     <ul>
       <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
       <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
+    </ul>
+    <h3>Fitur baru di v1.3</h3>
+    <ul>
+      <li><strong>Putar di latar belakang diperbaiki</strong> — audio kini diputar langsung (tanpa Web Audio) sehingga lagu tetap jalan saat aplikasi diminimalkan atau layar dikunci. Equalizer dihapus karena butuh Web Audio; visualizer diganti animasi simulasi.</li>
+      <li><strong>SoundCloud</strong> — tab baru untuk mencari dan memutar lagu apa pun dari SoundCloud.</li>
+      <li><strong>Tampilan baru terinspirasi SoundCloud</strong> — aksen oranye, waveform seek bar di player dan Now Playing, baris lagu dengan sampul kotak dan penanda oranye pada lagu yang sedang diputar.</li>
+      <li>Tata letak dirapikan: jarak dan ukuran kartu konsisten di semua tab, teks tidak meluber.</li>
     </ul>
     <h3>Fitur baru di v1.2</h3>
     <ul>
@@ -125,14 +143,14 @@
     <ul>
       <li>Layar Now Playing layar penuh dengan visualizer audio</li>
       <li>Playlist, riwayat putar, sleep timer, kecepatan putar</li>
-      <li>Equalizer dengan 7 preset, tema terang/gelap</li>
+      <li>Tema terang/gelap</li>
       <li>Manajer unduhan dengan progres &amp; ukuran file</li>
       <li>Beranda dengan lagu pilihan &amp; genre</li>
       <li>Dukungan Media Session — lagu tetap tampil di Lock Screen &amp; Control Center saat diputar di latar belakang</li>
     </ul>
     <h3>Privasi</h3>
     <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
-    <p class="version">Musikku v1.2 — PWA + Capacitor (iOS)</p>
+    <p class="version">Musikku v1.3 — PWA + Capacitor (iOS)</p>
   </section>
 </main>
 
@@ -147,9 +165,9 @@
     <span id="sleepBadge" class="sleep-badge" hidden></span>
     <button id="favBtn" class="icon-btn" title="Favorit">♡</button>
   </div>
-  <div class="seek-row">
+  <div class="wave-row">
     <span id="curTime">0:00</span>
-    <input id="seekBar" type="range" min="0" max="100" value="0" step="0.1">
+    <canvas id="waveMini" class="wave-seek" height="36"></canvas>
     <span id="durTime">0:00</span>
   </div>
   <div class="controls">
@@ -186,9 +204,9 @@
   </div>
   <div class="np-title" id="npTitle">—</div>
   <div class="np-artist" id="npArtist">—</div>
-  <div class="seek-row np-seek">
+  <div class="wave-row np-seek">
     <span id="npCurTime">0:00</span>
-    <input id="npSeekBar" type="range" min="0" max="100" value="0" step="0.1">
+    <canvas id="waveNp" class="wave-seek" height="40"></canvas>
     <span id="npDurTime">0:00</span>
   </div>
   <div class="controls np-controls">
@@ -207,18 +225,6 @@
         <option value="1.25">1.25x</option>
         <option value="1.5">1.5x</option>
         <option value="2">2x</option>
-      </select>
-    </div>
-    <div class="np-row">
-      <label for="eqPreset">🎚️ Equalizer</label>
-      <select id="eqPreset">
-        <option value="normal" selected>Normal</option>
-        <option value="bass">Bass Boost</option>
-        <option value="treble">Treble Boost</option>
-        <option value="pop">Pop</option>
-        <option value="rock">Rock</option>
-        <option value="jazz">Jazz</option>
-        <option value="vocal">Vocal</option>
       </select>
     </div>
     <div class="np-row">
