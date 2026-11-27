@@ -1,5 +1,5 @@
 /* Musikku service worker — cache app shell + lagu yang diunduh */
-const SHELL_CACHE = 'musikku-shell-v5';
+const SHELL_CACHE = 'musikku-shell-v6';
 const AUDIO_CACHE = 'musikku-audio-v1';
 const SHELL_FILES = [
   './', './index.html', './styles.css', './app.js', './manifest.json',
