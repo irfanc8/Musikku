@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Musikku">
+<title>Musikku — Pemutar Musik Online & Offline</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <h1>🎵 Musikku</h1>
+  <p class="subtitle">Pemutar musik online &amp; offline</p>
+  <div class="search-row">
+    <input id="searchInput" type="search" placeholder="Cari lagu, artis, album…" autocomplete="off">
+    <button id="searchBtn" class="btn-primary">Cari</button>
+  </div>
+  <div class="chips" id="genreChips"></div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="jelajah">Jelajah</button>
+  <button class="tab" data-tab="unduhan">Unduhan <span id="dlCount" class="badge">0</span></button>
+  <button class="tab" data-tab="filesaya">File Saya <span id="myCount" class="badge">0</span></button>
+  <button class="tab" data-tab="favorit">Favorit</button>
+  <button class="tab" data-tab="tentang">Tentang</button>
+</nav>
+
+<main id="content">
+  <section id="tab-jelajah" class="tab-page active">
+    <div id="statusLine" class="status">Memuat lagu pilihan…</div>
+    <div id="results" class="list"></div>
+  </section>
+
+  <section id="tab-unduhan" class="tab-page">
+    <p class="hint">Lagu yang diunduh tersimpan di perangkat dan bisa diputar tanpa internet.</p>
+    <div id="downloadsList" class="list"></div>
+  </section>
+
+  <section id="tab-filesaya" class="tab-page">
+    <button id="importBtn" class="btn-primary block">＋ Impor File Musik (MP3 / M4A / OGG)</button>
+    <input id="fileInput" type="file" accept="audio/*" multiple hidden>
+    <p class="hint">File yang diimpor tersimpan di perangkat dan bisa diputar offline.</p>
+    <div id="myFilesList" class="list"></div>
+  </section>
+
+  <section id="tab-favorit" class="tab-page">
+    <div id="favList" class="list"></div>
+  </section>
+
+  <section id="tab-tentang" class="tab-page">
+    <h2>Tentang Musikku</h2>
+    <p>Musikku adalah pemutar musik gratis untuk iPhone. Bisa memutar lagu <strong>full</strong> (bukan cuplikan 30 detik) dari arsip musik bebas, mengunduhnya untuk didengar offline, dan memutar file musik dari perangkatmu.</p>
+    <h3>Sumber lagu online</h3>
+    <p>Katalog online berasal dari <strong>Internet Archive</strong> (archive.org) — jutaan rekaman musik bebas, Creative Commons, dan rekaman live. Lagu pop arus utama yang masih berhak cipta <strong>tidak</strong> tersedia gratis di sini; untuk lagu seperti itu, gunakan tombol Impor File dan putar koleksimu sendiri.</p>
+    <h3>Offline</h3>
+    <ul>
+      <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
+      <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
+    </ul>
+    <h3>Privasi</h3>
+    <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
+    <p class="version">Musikku v1.0 — PWA + Capacitor (iOS)</p>
+  </section>
+</main>
+
+<!-- Player bar -->
+<footer id="playerBar" class="player hidden">
+  <div class="player-info">
+    <div class="player-art">🎵</div>
+    <div class="player-text">
+      <div id="nowTitle" class="now-title">—</div>
+      <div id="nowArtist" class="now-artist">—</div>
+    </div>
+    <button id="favBtn" class="icon-btn" title="Favorit">♡</button>
+  </div>
+  <div class="seek-row">
+    <span id="curTime">0:00</span>
+    <input id="seekBar" type="range" min="0" max="100" value="0" step="0.1">
+    <span id="durTime">0:00</span>
+  </div>
+  <div class="controls">
+    <button id="shuffleBtn" class="icon-btn" title="Acak">🔀</button>
+    <button id="prevBtn" class="icon-btn" title="Sebelumnya">⏮</button>
+    <button id="playBtn" class="icon-btn big" title="Putar/Jeda">▶</button>
+    <button id="nextBtn" class="icon-btn" title="Berikutnya">⏭</button>
+    <button id="repeatBtn" class="icon-btn" title="Ulangi">🔁</button>
+  </div>
+  <div class="vol-row">
+    <span>🔈</span>
+    <input id="volBar" type="range" min="0" max="1" step="0.01" value="0.9">
+    <span>🔊</span>
+    <button id="dlBtn" class="btn-small">⬇ Unduh</button>
+    <span id="dlState" class="dl-state"></span>
+  </div>
+  <div id="queueLine" class="queue-line"></div>
+</footer>
+
+<audio id="audio" preload="metadata"></audio>
+<script src="app.js"></script>
+</body>
+</html>
