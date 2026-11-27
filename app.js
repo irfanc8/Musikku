@@ -1,6 +1,7 @@
-/* Musikku v1.1 — pemutar musik online (Internet Archive) + offline (unduhan & file lokal)
+/* Musikku v1.2 — pemutar musik online (Internet Archive) + offline (unduhan & file lokal)
    Fitur: Now Playing layar penuh + visualizer, playlist, riwayat, sleep timer,
-   kecepatan putar, equalizer, manajer unduhan, beranda, tema terang/gelap, Media Session API. */
+   kecepatan putar, equalizer, manajer unduhan, beranda, tema terang/gelap, Media Session API,
+   Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo). */
 (function () {
   'use strict';
 
@@ -1016,7 +1017,7 @@
     if (name === 'favorit') renderFavs();
     if (name === 'playlist') renderPlaylists();
     if (name === 'riwayat') renderRecent();
-    if (name === 'beranda') renderHomeRecent();
+    if (name === 'beranda') { closeCollection(); renderHomeRecent(); }
   }
   $$('.tab').forEach((tab) => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -1057,6 +1058,114 @@
     });
   }
 
+  /* ---------- Koleksi Pilihan (Pop Indo, Pop Punk/Skate Punk Indo, Ska Indo, Reggae Indo) ----------
+     Kompilasi lagu Indonesia yang diunggah pengguna ke Internet Archive.
+     Kartu koleksi → daftar lagu → ketuk untuk memutar (player & antrean yang sama). */
+  const COLLECTION_GROUPS = [
+    { group: '🇮🇩 Pop Indo', cols: [
+      { id: 'juicy-luicy-h-5', name: 'Juicy Luicy — H-5', desc: 'Juicy Luicy' },
+      { id: 'juicy-luicy-adrian-khalif-feat.-mahalini-sialan-live-performance-256-kbps', name: 'Juicy Luicy & Adrian Khalif feat. Mahalini — Sialan (Live)', desc: 'Juicy Luicy' },
+      { id: 'TopLaguPopTerbaru', name: 'Top Lagu Pop Terbaru', desc: '51 lagu pop Indo' },
+      { id: 'KumpulanLaguPopIndonesia', name: 'Kumpulan Lagu Pop Indonesia', desc: '96 lagu pop Indo' },
+      { id: 'LaguPopLawasTerbaik', name: 'Lagu Pop Lawas Terbaik', desc: '37 lagu pop lawas' }
+    ] },
+    { group: '🎸 Pop Punk / Skate Punk Indo', cols: [
+      { id: 'AlbumSoekamtiCom2010', name: 'Endank Soekamti — Album 2010', desc: '15 lagu · Endank Soekamti' },
+      { id: 'AlbumKOLABORASOE', name: 'Endank Soekamti — KOLABORASOE', desc: '16 lagu · Endank Soekamti' },
+      { id: 'superglad-hari-hura-hura', name: 'Superglad — Hari Hura Hura', desc: '10 lagu · Superglad' },
+      { id: 'cewek-matrepolis', name: 'Superglad — Cewek Matrepolis', desc: '4 lagu · Superglad' },
+      { id: 'PeeWeeGaskinsAmukRedam', name: 'Pee Wee Gaskins — Amuk Redam', desc: 'Pee Wee Gaskins' },
+      { id: 'peeweegaskinssampaijuara', name: 'Pee Wee Gaskins — Sampai Juara', desc: 'Pee Wee Gaskins' }
+    ] },
+    { group: '🎺 Ska Indo', cols: [
+      { id: 'tipe-x-festifal-perasaan', name: 'Tipe-X — Festifal Perasaan', desc: '10 lagu ska Indo' },
+      { id: 'discography-hitam-putih', name: 'Tipe-X — Hitam Putih', desc: '10 lagu ska Indo' }
+    ] },
+    { group: '🌴 Reggae Indo', cols: [
+      { id: 'LaguTonyQRastafara', name: 'Tony Q Rastafara', desc: '32 lagu reggae' },
+      { id: '3.-steven-coconut-treez-bebas-merdeka', name: 'Steven & Coconut Treez — Bebas Merdeka', desc: 'Steven & Coconut Treez' },
+      { id: 'TopSongRegeSka', name: 'Top Song Rege Ska', desc: '7 lagu rege/ska Indo' },
+      { id: 'LaguReggae', name: 'Lagu Reggae', desc: '259 lagu reggae' }
+    ] }
+  ];
+  const COLLECTION_CACHE_TTL = 7 * 24 * 3600 * 1000; // 7 hari
+  function getCollectionCache() { return store.get('musikku_collections', {}); }
+  function setCollectionCache(c) { store.set('musikku_collections', c); }
+  /* Muat daftar lagu satu koleksi; utamakan .mp3 dan buang duplikat .ogg dari lagu yang sama. */
+  function loadCollectionTracks(identifier) {
+    const cache = getCollectionCache();
+    const hit = cache[identifier];
+    if (hit && hit.at && (Date.now() - hit.at) < COLLECTION_CACHE_TTL && hit.tracks && hit.tracks.length) {
+      return Promise.resolve(hit.tracks);
+    }
+    return archiveItemTracks(identifier).then((tracks) => {
+      const byTitle = {};
+      tracks.forEach((t) => {
+        const key = (t.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        const prev = byTitle[key];
+        const rank = (u) => (u && u.toLowerCase().indexOf('.mp3') !== -1 ? 0 : u && u.toLowerCase().indexOf('.m4a') !== -1 ? 1 : 2);
+        if (!prev || rank(t.url) < rank(prev.url)) byTitle[key] = t;
+      });
+      const deduped = Object.values(byTitle);
+      cache[identifier] = { at: Date.now(), tracks: deduped };
+      setCollectionCache(cache);
+      return deduped;
+    });
+  }
+  function renderCollections() {
+    const box = $('#collectionsHome');
+    if (!box) return;
+    box.innerHTML = '';
+    COLLECTION_GROUPS.forEach((g) => {
+      const title = document.createElement('h3');
+      title.className = 'collection-group-title';
+      title.textContent = g.group;
+      box.appendChild(title);
+      const row = document.createElement('div');
+      row.className = 'featured-row';
+      g.cols.forEach((c) => {
+        const card = document.createElement('div');
+        card.className = 'featured-card collection-card';
+        card.innerHTML = '<div class="feat-art" style="background:' + coverGradient(c.name) + '"><span>♪</span></div>' +
+          '<div class="feat-title">' + esc(c.name) + '</div>' +
+          '<div class="feat-artist">' + esc(c.desc) + ' · ketuk untuk buka</div>';
+        card.addEventListener('click', () => openCollection(c));
+        row.appendChild(card);
+      });
+      box.appendChild(row);
+    });
+  }
+  let openCollectionId = null;
+  function openCollection(col) {
+    openCollectionId = col.id;
+    $('#berandaHome').hidden = true;
+    const detail = $('#collectionDetail');
+    detail.hidden = false;
+    $('#collectionDetailName').textContent = col.name;
+    const st = $('#collectionDetailStatus');
+    st.textContent = 'Memuat lagu…';
+    const box = $('#collectionDetailList');
+    box.innerHTML = '';
+    loadCollectionTracks(col.id).then((tracks) => {
+      if (openCollectionId !== col.id) return;
+      if (!tracks.length) { st.textContent = 'Tidak ada lagu di koleksi ini (mungkin sudah dihapus dari arsip).'; return; }
+      st.textContent = tracks.length + ' lagu — ketuk untuk memutar.';
+      tracks.forEach((t, i) => box.appendChild(trackRow(t, tracks, i)));
+      markPlayingRow();
+    }).catch(() => {
+      if (openCollectionId !== col.id) return;
+      st.textContent = 'Gagal memuat koleksi. Periksa internet lalu coba lagi.';
+    });
+  }
+  function closeCollection() {
+    openCollectionId = null;
+    const detail = $('#collectionDetail');
+    if (detail) detail.hidden = true;
+    const home = $('#berandaHome');
+    if (home) home.hidden = false;
+  }
+  $('#backToCollections').addEventListener('click', closeCollection);
+
   /* ---------- tema ---------- */
   $('#themeToggle').addEventListener('click', toggleTheme);
 
@@ -1075,5 +1184,6 @@
   renderPlaylists();
   renderRecent();
   renderHomeRecent();
+  renderCollections();
   loadFeatured();
 })();
