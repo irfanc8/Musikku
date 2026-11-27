@@ -1,0 +1,129 @@
+/* Musikku — tema gelap gaya iOS (ala Apple Music) */
+:root {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface2: #2c2c2e;
+  --text: #f5f5f7;
+  --muted: #98989d;
+  --accent: #fa2d48;
+  --accent2: #ff375f;
+  --border: #38383a;
+  --radius: 14px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  padding-bottom: 210px; /* ruang untuk player bar */
+}
+.app-header {
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px 12px;
+  background: linear-gradient(180deg, #1c1c1e 0%, #000 100%);
+  position: sticky; top: 0; z-index: 10;
+}
+.app-header h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+.subtitle { margin: 2px 0 12px; color: var(--muted); font-size: 14px; }
+.search-row { display: flex; gap: 8px; }
+.search-row input {
+  flex: 1; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 16px; outline: none;
+}
+.search-row input:focus { border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 12px;
+  padding: 11px 18px; font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.btn-primary:active { opacity: 0.8; }
+.btn-primary.block { display: block; width: 100%; margin: 4px 0 8px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 14px; cursor: pointer;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs {
+  display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto;
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; background: #000; z-index: 9;
+}
+.tab {
+  flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; border: none;
+  background: transparent; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.tab.active { background: var(--surface2); color: var(--text); }
+.badge {
+  background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px;
+  padding: 1px 7px; margin-left: 3px; font-weight: 700;
+}
+main { padding: 12px 16px 24px; }
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+.status { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+.hint { color: var(--muted); font-size: 14px; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.card h3 { margin: 0 0 3px; font-size: 16px; }
+.card .meta { color: var(--muted); font-size: 13px; }
+.card .row { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+.btn-small {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 13px; font-size: 14px; cursor: pointer;
+}
+.btn-small.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-small:active { opacity: 0.75; }
+.btn-small:disabled { opacity: 0.45; cursor: default; }
+.track { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--border); }
+.track:first-child { border-top: none; }
+.track .t-num { color: var(--muted); width: 22px; text-align: right; font-size: 13px; flex: 0 0 auto; }
+.track .t-info { flex: 1; min-width: 0; }
+.track .t-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track .t-sub { color: var(--muted); font-size: 13px; }
+.track.playing .t-title { color: var(--accent); font-weight: 700; }
+.dl-badge {
+  font-size: 11px; font-weight: 700; color: #30d158; border: 1px solid #30d158;
+  border-radius: 999px; padding: 2px 7px; flex: 0 0 auto;
+}
+/* Player bar */
+.player {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: rgba(28, 28, 30, 0.97);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  backdrop-filter: blur(12px);
+}
+.player.hidden { display: none; }
+.player-info { display: flex; align-items: center; gap: 10px; }
+.player-art {
+  width: 44px; height: 44px; border-radius: 9px; background: var(--surface2);
+  display: flex; align-items: center; justify-content: center; font-size: 22px; flex: 0 0 auto;
+}
+.player-text { flex: 1; min-width: 0; }
+.now-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-artist { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn {
+  background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; padding: 4px 6px;
+}
+.icon-btn.big { font-size: 30px; }
+.icon-btn.on { color: var(--accent); }
+.icon-btn.faved { color: var(--accent); }
+.seek-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.seek-row input[type="range"], .vol-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.controls { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 2px; }
+.vol-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; }
+.dl-state { font-size: 13px; color: #30d158; }
+.queue-line { margin-top: 6px; font-size: 12px; color: var(--muted); text-align: center; }
+h2 { font-size: 20px; margin: 14px 0 6px; }
+h3 { font-size: 16px; margin: 14px 0 4px; }
+.tab-page p, .tab-page li { font-size: 15px; color: #d1d1d6; }
+.version { color: var(--muted); font-size: 13px; margin-top: 18px; }
+@media (min-width: 700px) {
+  body { max-width: 640px; margin: 0 auto; }
+  .player { max-width: 640px; left: 50%; transform: translateX(-50%); }
+}
