@@ -14,8 +14,13 @@
 </head>
 <body>
 <header class="app-header">
-  <h1>🎵 Musikku</h1>
-  <p class="subtitle">Pemutar musik online &amp; offline</p>
+  <div class="header-top">
+    <div>
+      <h1>🎵 Musikku</h1>
+      <p class="subtitle">Pemutar musik online &amp; offline</p>
+    </div>
+    <button id="themeToggle" class="icon-btn theme-btn" title="Ganti tema">🌙</button>
+  </div>
   <div class="search-row">
     <input id="searchInput" type="search" placeholder="Cari lagu, artis, album…" autocomplete="off">
     <button id="searchBtn" class="btn-primary">Cari</button>
@@ -24,7 +29,10 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="jelajah">Jelajah</button>
+  <button class="tab active" data-tab="beranda">Beranda</button>
+  <button class="tab" data-tab="jelajah">Jelajah</button>
+  <button class="tab" data-tab="playlist">Playlist</button>
+  <button class="tab" data-tab="riwayat">Riwayat</button>
   <button class="tab" data-tab="unduhan">Unduhan <span id="dlCount" class="badge">0</span></button>
   <button class="tab" data-tab="filesaya">File Saya <span id="myCount" class="badge">0</span></button>
   <button class="tab" data-tab="favorit">Favorit</button>
@@ -32,13 +40,44 @@
 </nav>
 
 <main id="content">
-  <section id="tab-jelajah" class="tab-page active">
+  <section id="tab-beranda" class="tab-page active">
+    <h2 class="section-title">✨ Pilihan Untukmu</h2>
+    <div id="featuredRow" class="featured-row"></div>
+    <h2 class="section-title">🎧 Jelajahi Genre</h2>
+    <div class="chips wrap" id="genreChipsHome"></div>
+    <h2 class="section-title">🕘 Baru Diputar</h2>
+    <div id="homeRecent" class="list"></div>
+  </section>
+
+  <section id="tab-jelajah" class="tab-page">
     <div id="statusLine" class="status">Memuat lagu pilihan…</div>
     <div id="results" class="list"></div>
   </section>
 
+  <section id="tab-playlist" class="tab-page">
+    <div class="playlist-create">
+      <input id="newPlaylistName" type="text" placeholder="Nama playlist baru…" maxlength="40" autocomplete="off">
+      <button id="createPlaylistBtn" class="btn-primary">＋ Buat</button>
+    </div>
+    <div id="playlistsList" class="list"></div>
+    <div id="playlistDetail" class="playlist-detail" hidden>
+      <div class="playlist-detail-head">
+        <button id="backToPlaylists" class="btn-small">← Semua Playlist</button>
+        <h2 id="playlistDetailName"></h2>
+      </div>
+      <div id="playlistDetailList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="tab-riwayat" class="tab-page">
+    <p class="hint">Lagu yang baru kamu putar — ketuk untuk memutar lagi.</p>
+    <div class="row-end"><button id="clearRecentBtn" class="btn-small">Hapus Riwayat</button></div>
+    <div id="recentList" class="list"></div>
+  </section>
+
   <section id="tab-unduhan" class="tab-page">
     <p class="hint">Lagu yang diunduh tersimpan di perangkat dan bisa diputar tanpa internet.</p>
+    <div id="dlProgressList"></div>
     <div id="downloadsList" class="list"></div>
   </section>
 
@@ -63,20 +102,30 @@
       <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
       <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
     </ul>
+    <h3>Fitur baru di v1.1</h3>
+    <ul>
+      <li>Layar Now Playing layar penuh dengan visualizer audio</li>
+      <li>Playlist, riwayat putar, sleep timer, kecepatan putar</li>
+      <li>Equalizer dengan 7 preset, tema terang/gelap</li>
+      <li>Manajer unduhan dengan progres &amp; ukuran file</li>
+      <li>Beranda dengan lagu pilihan &amp; genre</li>
+      <li>Dukungan Media Session — lagu tetap tampil di Lock Screen &amp; Control Center saat diputar di latar belakang</li>
+    </ul>
     <h3>Privasi</h3>
     <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
-    <p class="version">Musikku v1.0 — PWA + Capacitor (iOS)</p>
+    <p class="version">Musikku v1.1 — PWA + Capacitor (iOS)</p>
   </section>
 </main>
 
 <!-- Player bar -->
 <footer id="playerBar" class="player hidden">
-  <div class="player-info">
-    <div class="player-art">🎵</div>
+  <div class="player-info" id="playerInfo">
+    <div class="player-art" id="playerArt">🎵</div>
     <div class="player-text">
       <div id="nowTitle" class="now-title">—</div>
       <div id="nowArtist" class="now-artist">—</div>
     </div>
+    <span id="sleepBadge" class="sleep-badge" hidden></span>
     <button id="favBtn" class="icon-btn" title="Favorit">♡</button>
   </div>
   <div class="seek-row">
@@ -98,10 +147,103 @@
     <button id="dlBtn" class="btn-small">⬇ Unduh</button>
     <span id="dlState" class="dl-state"></span>
   </div>
+  <div id="dlProgressWrap" class="dl-progress-wrap" hidden>
+    <div id="dlProgressBar" class="dl-progress-bar"></div>
+    <span id="dlProgressText" class="dl-progress-text"></span>
+  </div>
   <div id="queueLine" class="queue-line"></div>
 </footer>
 
-<audio id="audio" preload="metadata"></audio>
+<!-- Full-screen Now Playing -->
+<div id="nowPlaying" class="now-playing" hidden>
+  <div class="np-top">
+    <button id="npClose" class="icon-btn" title="Tutup">⌄</button>
+    <span class="np-label">Sedang Diputar</span>
+    <button id="npMenuBtn" class="icon-btn" title="Opsi lagu">⋯</button>
+  </div>
+  <div class="np-art-wrap">
+    <div id="npArt" class="np-art">🎵</div>
+    <canvas id="vizCanvas" class="viz-canvas" width="300" height="64"></canvas>
+  </div>
+  <div class="np-title" id="npTitle">—</div>
+  <div class="np-artist" id="npArtist">—</div>
+  <div class="seek-row np-seek">
+    <span id="npCurTime">0:00</span>
+    <input id="npSeekBar" type="range" min="0" max="100" value="0" step="0.1">
+    <span id="npDurTime">0:00</span>
+  </div>
+  <div class="controls np-controls">
+    <button id="npShuffleBtn" class="icon-btn" title="Acak">🔀</button>
+    <button id="npPrevBtn" class="icon-btn" title="Sebelumnya">⏮</button>
+    <button id="npPlayBtn" class="icon-btn big" title="Putar/Jeda">▶</button>
+    <button id="npNextBtn" class="icon-btn" title="Berikutnya">⏭</button>
+    <button id="npRepeatBtn" class="icon-btn" title="Ulangi">🔁</button>
+  </div>
+  <div class="np-rows">
+    <div class="np-row">
+      <label for="speedSelect">⏩ Kecepatan</label>
+      <select id="speedSelect">
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1x (Normal)</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </div>
+    <div class="np-row">
+      <label for="eqPreset">🎚️ Equalizer</label>
+      <select id="eqPreset">
+        <option value="normal" selected>Normal</option>
+        <option value="bass">Bass Boost</option>
+        <option value="treble">Treble Boost</option>
+        <option value="pop">Pop</option>
+        <option value="rock">Rock</option>
+        <option value="jazz">Jazz</option>
+        <option value="vocal">Vocal</option>
+      </select>
+    </div>
+    <div class="np-row">
+      <label for="sleepSelect">😴 Sleep Timer</label>
+      <select id="sleepSelect">
+        <option value="0" selected>Mati</option>
+        <option value="15">15 menit</option>
+        <option value="30">30 menit</option>
+        <option value="60">60 menit</option>
+        <option value="90">90 menit</option>
+      </select>
+      <span id="sleepCountdown" class="sleep-countdown"></span>
+    </div>
+    <div class="np-row">
+      <label for="npVolBar">🔊 Volume</label>
+      <input id="npVolBar" type="range" min="0" max="1" step="0.01" value="0.9">
+    </div>
+    <div class="np-row np-actions">
+      <button id="npFavBtn" class="btn-small">♡ Favorit</button>
+      <button id="npAddPlaylistBtn" class="btn-small">＋ Playlist</button>
+      <button id="npDlBtn" class="btn-small">⬇ Unduh</button>
+    </div>
+  </div>
+  <h3 class="np-queue-title">Antrean Berikutnya</h3>
+  <div id="npQueue" class="list np-queue"></div>
+</div>
+
+<!-- Song menu (tambah ke playlist / favorit / unduh) -->
+<div id="songMenu" class="modal" hidden>
+  <div class="modal-backdrop" id="songMenuBackdrop"></div>
+  <div class="modal-card">
+    <div class="modal-title" id="songMenuTitle">Lagu</div>
+    <div class="modal-sub" id="songMenuArtist"></div>
+    <div class="modal-actions">
+      <button id="songMenuFav" class="btn-small block-btn">♡ Tambah ke Favorit</button>
+      <button id="songMenuDl" class="btn-small block-btn">⬇ Unduh</button>
+    </div>
+    <div class="modal-label">Tambah ke playlist:</div>
+    <div id="songMenuPlaylists" class="list"></div>
+    <button id="songMenuClose" class="btn-small block-btn">Tutup</button>
+  </div>
+</div>
+
+<audio id="audio" preload="metadata" crossorigin="anonymous" playsinline></audio>
 <script src="app.js"></script>
 </body>
 </html>
