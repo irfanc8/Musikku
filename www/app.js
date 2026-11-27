@@ -1,10 +1,13 @@
-/* Musikku v1.3 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
+/* Musikku v1.4 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
    Fitur: Now Playing layar penuh + visualizer simulasi, playlist, riwayat, sleep timer,
    kecepatan putar, manajer unduhan, beranda, tema terang/gelap, Media Session API,
    Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo), SoundCloud.
    v1.3: audio diputar LANGSUNG oleh <audio> (tanpa Web Audio) agar tetap jalan di latar
    belakang iOS; equalizer dihapus (butuh Web Audio); visualizer diganti animasi simulasi;
-   tampilan terinspirasi SoundCloud (aksen oranye, waveform seek bar). */
+   tampilan terinspirasi SoundCloud (aksen oranye, waveform seek bar).
+   v1.4: SoundCloud memakai CapacitorHttp (HTTP native, tanpa CORS) — fetch() biasa diblokir
+   api-v2.soundcloud.com dari origin capacitor://localhost. Koleksi Amerika (Archive) +
+   Indie Indo Kekinian (akun SoundCloud resmi); konten kurasi hanya Amerika + Indonesia. */
 (function () {
   'use strict';
 
@@ -297,45 +300,75 @@
   /* ---------- SoundCloud API v2 ----------
      client_id publik yang diambil dari JavaScript web player SoundCloud (terverifikasi
      2026-11-27: pencarian HTTP 200, stream HLS ter-resolve ke playlist .m3u8 yang valid).
-     Client_id ini bisa kedaluwarsa sewaktu-waktu; kalau pencarian gagal, aplikasi
-     menampilkan pesan dan menyarankan pencarian Internet Archive.
+     PENTING (v1.4): api-v2.soundcloud.com TIDAK mengizinkan CORS dari origin
+     capacitor://localhost — fetch() biasa selalu diblokir di WebView iOS. Karena itu
+     semua panggilan SoundCloud memakai CapacitorHttp (HTTP native, tanpa CORS) bila
+     tersedia; fetch() hanya dipakai sebagai fallback di web/PWA.
      Stream: transcodings HLS (iOS Safari/WKWebView memutar HLS secara native).
      URL stream di-resolve saat lagu diputar (bukan saat pencarian) karena URL-nya
      bertanda tangan dan cepat kedaluwarsa. */
   const SC_CLIENT_ID = 'zQBXL76oebJv6L1OhUMMtNEmdG6Th0wF';
   const SC_API = 'https://api-v2.soundcloud.com';
+  /* GET JSON lewat HTTP native (CapacitorHttp) bila tersedia — menembus CORS;
+     fallback ke fetch() di web/PWA. Mengembalikan Promise<objek JSON>. */
+  function scGetJson(url) {
+    var http = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins)
+      ? window.Capacitor.Plugins.CapacitorHttp : null;
+    if (http && typeof http.get === 'function') {
+      return http.get({ url: url }).then(function (res) {
+        if (!res || res.status < 200 || res.status >= 300) throw new Error('HTTP ' + (res && res.status));
+        return res.data;
+      });
+    }
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
   function scArtwork(t) {
     const a = t.artwork_url || (t.user && t.user.avatar_url) || '';
     if (!a) return '';
     return a.replace('-large.', '-t500x500.').replace('-large.jpg', '-t500x500.jpg');
   }
+  /* Petakan satu track SoundCloud API ke bentuk track aplikasi. */
+  function mapSoundCloudTrack(t) {
+    const trs = (t.media && t.media.transcodings) || [];
+    const prog = trs.find((x) => x.format && x.format.protocol === 'progressive');
+    const hls = trs.find((x) => x.format && x.format.protocol === 'hls');
+    const chosen = prog || hls;
+    if (!chosen) return null;
+    return {
+      id: 'sc:' + t.id,
+      title: t.title || 'Tanpa Judul',
+      artist: (t.user && t.user.username) || 'SoundCloud',
+      album: 'SoundCloud',
+      url: '', // diisi saat diputar (resolveSoundCloudStream)
+      duration: Math.round((t.duration || 0) / 1000),
+      source: 'soundcloud',
+      artwork: scArtwork(t),
+      streamUrl: chosen.url,
+      streamProtocol: chosen.format.protocol
+    };
+  }
   function soundcloudSearch(query, limit) {
     const url = SC_API + '/search/tracks?' + new URLSearchParams({
       q: query, client_id: SC_CLIENT_ID, limit: String(limit || 20), linked_partitioning: '1'
     }).toString();
-    return fetch(url).then((r) => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    }).then((d) => {
+    return scGetJson(url).then((d) => {
       const list = (d.collection || []).filter((t) => t && t.media && t.media.transcodings && t.media.transcodings.length && t.duration);
-      return list.map((t) => {
-        const trs = t.media.transcodings;
-        const prog = trs.find((x) => x.format && x.format.protocol === 'progressive');
-        const hls = trs.find((x) => x.format && x.format.protocol === 'hls');
-        const chosen = prog || hls;
-        return {
-          id: 'sc:' + t.id,
-          title: t.title || 'Tanpa Judul',
-          artist: (t.user && t.user.username) || 'SoundCloud',
-          album: 'SoundCloud',
-          url: '', // diisi saat diputar (resolveSoundCloudStream)
-          duration: Math.round((t.duration || 0) / 1000),
-          source: 'soundcloud',
-          artwork: scArtwork(t),
-          streamUrl: chosen ? chosen.url : '',
-          streamProtocol: chosen ? chosen.format.protocol : ''
-        };
-      }).filter((t) => t.streamUrl);
+      return list.map(mapSoundCloudTrack).filter(Boolean);
+    });
+  }
+  /* Daftar track dari akun SoundCloud resmi seorang artis (dipakai koleksi Indie Indo).
+     Hanya akun resmi yang dipakai — track di-resolve saat diputar seperti pencarian. */
+  function soundcloudUserTracks(userId, limit) {
+    const url = SC_API + '/users/' + userId + '/tracks?' + new URLSearchParams({
+      client_id: SC_CLIENT_ID, limit: String(limit || 50)
+    }).toString();
+    return scGetJson(url).then((d) => {
+      const list = Array.isArray(d) ? d : (d.collection || []);
+      return list.filter((t) => t && t.media && t.media.transcodings && t.media.transcodings.length && t.duration)
+        .map(mapSoundCloudTrack).filter(Boolean);
     });
   }
   /* Resolve URL stream SoundCloud (transcoding URL + client_id -> JSON {url}). */
@@ -344,11 +377,7 @@
     if (t._resolvedUrl && t._resolvedAt && (Date.now() - t._resolvedAt) < 20 * 60 * 1000) {
       return Promise.resolve(t._resolvedUrl);
     }
-    return fetch(t.streamUrl + (t.streamUrl.indexOf('?') === -1 ? '?' : '&') + 'client_id=' + SC_CLIENT_ID)
-      .then((r) => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+    return scGetJson(t.streamUrl + (t.streamUrl.indexOf('?') === -1 ? '?' : '&') + 'client_id=' + SC_CLIENT_ID)
       .then((d) => {
         if (!d.url) throw new Error('no url');
         t._resolvedUrl = d.url;
@@ -1091,12 +1120,13 @@
   /* (Equalizer dihapus di v1.3 — butuh Web Audio, yang mematikan pemutaran latar belakang.) */
 
   /* ---------- search / browse ---------- */
+  /* Genre di Beranda — hanya genre Amerika + Indonesia (v1.4: Klasik/Elektronik/Akustik
+     dihapus karena lintas negara; Reggae dibatasi ke Reggae Indo). */
   const GENRES = [
-    { label: 'Jazz', q: 'jazz' }, { label: 'Rock', q: 'rock' }, { label: 'Pop', q: 'pop' },
-    { label: 'Dangdut', q: 'dangdut' }, { label: 'Klasik', q: 'classical' },
-    { label: 'Elektronik', q: 'electronic' }, { label: 'Blues', q: 'blues' }, { label: 'Folk', q: 'folk' },
-    { label: 'Live', q: 'collection:(etree)' }, { label: 'Akustik', q: 'acoustic' },
-    { label: 'Reggae', q: 'reggae' }, { label: 'Gospel', q: 'gospel' }
+    { label: 'Jazz Amerika', q: 'jazz' }, { label: 'Rock Amerika', q: 'rock' }, { label: 'Pop Amerika', q: 'pop' },
+    { label: 'Country Amerika', q: 'country' }, { label: 'Blues Amerika', q: 'blues' }, { label: 'Folk Amerika', q: 'folk' },
+    { label: 'Gospel Amerika', q: 'gospel' }, { label: 'Live Amerika', q: 'collection:(etree)' },
+    { label: 'Dangdut', q: 'dangdut' }, { label: 'Reggae Indo', q: 'reggae indonesia' }
   ];
   function makeGenreChip(g) {
     const b = document.createElement('button');
@@ -1130,6 +1160,23 @@
   $('#searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const q = e.target.value.trim(); if (q) { switchTab('jelajah'); runSearch(q); } } });
 
   /* ---------- SoundCloud: cari & putar ---------- */
+  const SC_CHIPS = [
+    { label: 'Pop Amerika', q: 'american pop' },
+    { label: 'Jazz Amerika', q: 'american jazz' },
+    { label: 'Blues Amerika', q: 'american blues' },
+    { label: 'Dangdut', q: 'dangdut' },
+    { label: 'Pop Indo', q: 'pop indonesia' },
+    { label: 'Reggae Indo', q: 'reggae indonesia' }
+  ];
+  SC_CHIPS.forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = c.label;
+    b.addEventListener('click', () => {
+      $('#scSearchInput').value = c.q;
+      runSoundCloudSearch(c.q);
+    });
+    $('#scChips').appendChild(b);
+  });
   function runSoundCloudSearch(query) {
     const st = $('#scStatus'), box = $('#scResults');
     st.textContent = 'Mencari di SoundCloud…';
@@ -1140,7 +1187,7 @@
       tracks.forEach((t, i) => box.appendChild(trackRow(t, tracks, i)));
       markPlayingRow();
     }).catch(() => {
-      st.textContent = 'SoundCloud tidak bisa dijangkau sekarang (mungkin client_id kedaluwarsa). Coba lagi nanti, atau cari lewat Internet Archive.';
+      st.textContent = 'SoundCloud tidak bisa dijangkau sekarang. Periksa koneksi internet lalu coba lagi, atau cari lewat Internet Archive.';
     });
   }
   $('#scSearchBtn').addEventListener('click', () => {
@@ -1166,8 +1213,8 @@
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  /* ---------- featured (verified full tracks) + beranda ---------- */
-  const FEATURED = ['EnClaveDeJazz10', 'ElectromanALittleLouder', 'ElectroBailaTumbao'];
+  /* ---------- featured (verified full tracks, Amerika) + beranda ---------- */
+  const FEATURED = ['78T-LIST-0037', 'johnny-cash-american-iii-solitary-man-cd-rip', 'ella-und-louis-ella-und-louis-singen-aus-porgy-and-bess'];
   function loadFeatured() {
     setStatus('Memuat lagu pilihan…');
     Promise.all(FEATURED.map((id) => archiveItemTracks(id).catch(() => [])))
@@ -1201,8 +1248,9 @@
     });
   }
 
-  /* ---------- Koleksi Pilihan (Pop Indo, Pop Punk/Skate Punk Indo, Ska Indo, Reggae Indo) ----------
-     Kompilasi lagu Indonesia yang diunggah pengguna ke Internet Archive.
+  /* ---------- Koleksi Pilihan (Indo, Amerika, Indie Indo Kekinian) ----------
+     Kompilasi lagu Indonesia & Amerika dari Internet Archive, plus koleksi Indie Indo
+     dari akun SoundCloud resmi tiap band (scUser). Semua kurasi hanya Amerika + Indonesia.
      Kartu koleksi → daftar lagu → ketuk untuk memutar (player & antrean yang sama). */
   const COLLECTION_GROUPS = [
     { group: '🇮🇩 Pop Indo', cols: [
@@ -1229,19 +1277,52 @@
       { id: '3.-steven-coconut-treez-bebas-merdeka', name: 'Steven & Coconut Treez — Bebas Merdeka', desc: 'Steven & Coconut Treez' },
       { id: 'TopSongRegeSka', name: 'Top Song Rege Ska', desc: '7 lagu rege/ska Indo' },
       { id: 'LaguReggae', name: 'Lagu Reggae', desc: '259 lagu reggae' }
+    ] },
+    { group: '🇺🇸 Jazz Amerika', cols: [
+      { id: 'ella-und-louis-ella-und-louis-singen-aus-porgy-and-bess', name: 'Ella Fitzgerald & Louis Armstrong — Porgy and Bess', desc: '10 lagu · Ella & Louis' },
+      { id: '11-duke-ellington-rare-broadcasts-1951-musidisc-ja-5209', name: 'Duke Ellington — Rare Broadcasts 1951', desc: '11 lagu · Duke Ellington' },
+      { id: '07-chick-webb-if-i-didnt-care', name: 'Count Basie & Chick Webb — Southland Cafe 1939-40', desc: '10 lagu · Basie, Webb, Ella' },
+      { id: 'miles-davis-aura_202212', name: 'Miles Davis — AURA', desc: '10 lagu · Miles Davis' },
+      { id: '78T-LIST-0037', name: 'Playlist American Jazz', desc: '19 lagu jazz Amerika' }
+    ] },
+    { group: '🎸 Blues & Folk Amerika', cols: [
+      { id: '78_ham-eggs_lead-belly-woody-guthrie-cisco-houston_gbia8005012', name: 'Lead Belly — Midnight Special', desc: '6 lagu · Lead Belly' },
+      { id: '78_hard-travelling_woody-guthrie-woody-guthrie_gbia8004901', name: 'Woody Guthrie — Ballads from the Dust Bowl', desc: '6 lagu · Woody Guthrie' }
+    ] },
+    { group: '🤠 Country Amerika', cols: [
+      { id: 'johnny-cash-american-iii-solitary-man-cd-rip', name: 'Johnny Cash — American III: Solitary Man', desc: '14 lagu · Johnny Cash' },
+      { id: 'straight-to-hell-deluxe-edition', name: 'Hank Williams III — Straight to Hell (Deluxe)', desc: '15 lagu · Hank Williams III' },
+      { id: '2019-10-08-52', name: 'Bastard Sons of Johnny Cash — Live 2019', desc: '65 lagu live · Americana' }
+    ] },
+    { group: '🎵 Indie Indo Kekinian', cols: [
+      { id: 'sc-user-896154106', name: 'Perunggu — Koleksi Lengkap', desc: '28 lagu · Memorandum, Dalam Dinamika, Pendar', scUser: 896154106 },
+      { id: 'sc-user-41827465', name: 'Fourtwnty — Koleksi', desc: '14 lagu · Fana Merah Jambu, Aku Tenang, Hitam Putih', scUser: 41827465 },
+      { id: 'sc-user-1625261899', name: 'Hindia — Koleksi', desc: '15 lagu · Evaluasi, Secukupnya, Rumah ke Rumah', scUser: 1625261899 },
+      { id: 'sc-user-23854857', name: 'Threesixty — Koleksi', desc: '4 lagu · Dewi, Sampai Nanti, Tak Akan Bisa', scUser: 23854857 },
+      { id: 'sc-user-172584548', name: 'The Jansen — Demo & Awal', desc: '8 lagu awal · Alienasi, Bring Me Back to the 70’s', scUser: 172584548 },
+      { id: 'sc-user-523658790', name: '.Feast — Koleksi', desc: '7 lagu · Dalam Hitungan, Kelelawar, Peradaban', scUser: 523658790 },
+      { id: 'sc-user-15090252', name: 'Danilla — Koleksi', desc: '15 lagu · Ada di Sana, Terpaut Oleh Waktu + cover', scUser: 15090252 },
+      { id: 'sc-user-23223418', name: 'For Revenge — Koleksi', desc: '5 lagu · Second Chance, Sendiri, Termentahkan', scUser: 23223418 },
+      { id: 'sc-user-24112892', name: 'FSTVLST — Koleksi', desc: '9 lagu · Telan Cakrawalanya, Jenny Menarilah', scUser: 24112892 }
     ] }
   ];
   const COLLECTION_CACHE_TTL = 7 * 24 * 3600 * 1000; // 7 hari
   function getCollectionCache() { return store.get('musikku_collections', {}); }
   function setCollectionCache(c) { store.set('musikku_collections', c); }
-  /* Muat daftar lagu satu koleksi; utamakan .mp3 dan buang duplikat .ogg dari lagu yang sama. */
+  /* Muat daftar lagu satu koleksi; utamakan .mp3 dan buang duplikat .ogg dari lagu yang sama.
+     Koleksi SoundCloud (scUser) dimuat dari akun resmi artis via soundcloudUserTracks. */
   function loadCollectionTracks(identifier) {
     const cache = getCollectionCache();
     const hit = cache[identifier];
     if (hit && hit.at && (Date.now() - hit.at) < COLLECTION_CACHE_TTL && hit.tracks && hit.tracks.length) {
       return Promise.resolve(hit.tracks);
     }
-    return archiveItemTracks(identifier).then((tracks) => {
+    let col = null;
+    COLLECTION_GROUPS.forEach((g) => g.cols.forEach((c) => { if (c.id === identifier) col = c; }));
+    const loader = (col && col.scUser)
+      ? soundcloudUserTracks(col.scUser, 50)
+      : archiveItemTracks(identifier);
+    return loader.then((tracks) => {
       const byTitle = {};
       tracks.forEach((t) => {
         const key = (t.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
