@@ -16,10 +16,10 @@
 <header class="app-header">
   <div class="header-top">
     <div>
-      <h1>🎵 Musikku</h1>
+      <h1><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span> Musikku</h1>
       <p class="subtitle">Pemutar musik online &amp; offline</p>
     </div>
-    <button id="themeToggle" class="icon-btn theme-btn" title="Ganti tema">🌙</button>
+    <button id="themeToggle" class="icon-btn theme-btn" title="Ganti tema"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg></button>
   </div>
   <div class="search-row">
     <input id="searchInput" type="search" placeholder="Cari lagu, artis, album…" autocomplete="off">
@@ -43,12 +43,12 @@
 <main id="content">
   <section id="tab-beranda" class="tab-page active">
     <div id="berandaHome">
-      <h2 class="section-title">✨ Pilihan Untukmu</h2>
+      <h2 class="section-title"><span class="title-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2zm7 11l.9 2.9 2.9.9-2.9.9-.9 2.9-.9-2.9-2.9-.9 2.9-.9.9-2.9z"/></svg></span> Pilihan Untukmu</h2>
       <div id="featuredRow" class="featured-row"></div>
-      <h2 class="section-title">🎵 Koleksi Pilihan</h2>
+      <h2 class="section-title"><span class="title-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span> Koleksi Pilihan</h2>
       <div id="collectionsHome"></div>
       <p class="hint">Tidak ketemu lagunya di koleksi? Kotak pencarian di atas mencari seluruh arsip — lagu Indo apa pun yang ada di sana, dari yang terkenal sampai yang kurang dikenal, bisa dicari lewat pencarian.</p>
-      <h2 class="section-title">🕘 Baru Diputar</h2>
+      <h2 class="section-title"><span class="title-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></span> Baru Diputar</h2>
       <div id="homeRecent" class="list"></div>
     </div>
     <div id="collectionDetail" hidden>
@@ -56,6 +56,7 @@
         <button id="backToCollections" class="btn-small">← Semua Koleksi</button>
         <h2 id="collectionDetailName"></h2>
       </div>
+      <div id="collectionDetailArt" class="collection-hero"></div>
       <div id="collectionDetailStatus" class="status"></div>
       <div id="collectionDetailList" class="list"></div>
     </div>
@@ -128,6 +129,14 @@
       <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
       <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
     </ul>
+    <h3>Fitur baru di v1.5</h3>
+    <ul>
+      <li><strong>Ganti lagu diperbaiki</strong> — pindah lagu saat sedang memutar kini berhenti bersih lalu memutar lagu baru (sebelumnya lagu baru sering tidak bunyi).</li>
+      <li><strong>Foto di semua album &amp; lagu</strong> — kartu koleksi kini memakai foto asli: thumbnail arsip untuk koleksi Internet Archive, foto artis untuk koleksi SoundCloud, dan sampul asli tiap lagu di daftar putar.</li>
+      <li><strong>Ikon pemain baru</strong> — tombol putar, jeda, sebelumnya, berikutnya, acak, ulangi, favorit, dan unduh kini memakai ikon SVG kustom dengan tombol putar gradien oranye.</li>
+      <li><strong>Tema baru</strong> — tampilan dalam aplikasi dirombak: permukaan gelap hangat, aksen oranye gradien, kartu lebih lembut.</li>
+      <li><strong>Indie Indo via SoundCloud</strong> — Barasuara, Nadin Amizah, The Jansen, Threesixty, dan .Feast (Tarot &amp; Nina) kini tersedia sebagai koleksi pencarian SoundCloud — lagu-lagu ini tidak ada di akun resmi, jadi diambil dari unggahan komunitas di SoundCloud (ditandai "via SoundCloud").</li>
+    </ul>
     <h3>Fitur baru di v1.4</h3>
     <ul>
       <li><strong>SoundCloud diperbaiki</strong> — pencarian dan streaming SoundCloud kini memakai HTTP native (CapacitorHttp) sehingga tidak lagi diblokir di iPhone.</li>
@@ -158,20 +167,20 @@
     </ul>
     <h3>Privasi</h3>
     <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
-    <p class="version">Musikku v1.4 — PWA + Capacitor (iOS)</p>
+    <p class="version">Musikku v1.5 — PWA + Capacitor (iOS)</p>
   </section>
 </main>
 
 <!-- Player bar -->
 <footer id="playerBar" class="player hidden">
   <div class="player-info" id="playerInfo">
-    <div class="player-art" id="playerArt">🎵</div>
+    <div class="player-art" id="playerArt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></div>
     <div class="player-text">
       <div id="nowTitle" class="now-title">—</div>
       <div id="nowArtist" class="now-artist">—</div>
     </div>
     <span id="sleepBadge" class="sleep-badge" hidden></span>
-    <button id="favBtn" class="icon-btn" title="Favorit">♡</button>
+    <button id="favBtn" class="icon-btn" title="Favorit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></button>
   </div>
   <div class="wave-row">
     <span id="curTime">0:00</span>
@@ -179,17 +188,16 @@
     <span id="durTime">0:00</span>
   </div>
   <div class="controls">
-    <button id="shuffleBtn" class="icon-btn" title="Acak">🔀</button>
-    <button id="prevBtn" class="icon-btn" title="Sebelumnya">⏮</button>
-    <button id="playBtn" class="icon-btn big" title="Putar/Jeda">▶</button>
-    <button id="nextBtn" class="icon-btn" title="Berikutnya">⏭</button>
-    <button id="repeatBtn" class="icon-btn" title="Ulangi">🔁</button>
+    <button id="shuffleBtn" class="icon-btn" title="Acak"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+    <button id="prevBtn" class="icon-btn" title="Sebelumnya"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.4" y="5" width="2.6" height="14" rx="1"/><path d="M20 6.1v11.8c0 .8-.9 1.3-1.6.9L9 12.9c-.6-.4-.6-1.4 0-1.8l9.4-5.9c.7-.4 1.6.1 1.6.9z"/></svg></button>
+    <button id="playBtn" class="icon-btn big" title="Putar/Jeda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10.2-6.6c.6-.4.6-1.4 0-1.8L9.6 4.5c-.7-.4-1.6.1-1.6.9z"/></svg></button>
+    <button id="nextBtn" class="icon-btn" title="Berikutnya"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="5" width="2.6" height="14" rx="1"/><path d="M4 6.1v11.8c0 .8.9 1.3 1.6.9l9.4-5.9c.6-.4.6-1.4 0-1.8L5.6 5.2c-.7-.4-1.6.1-1.6.9z"/></svg></button>
+    <button id="repeatBtn" class="icon-btn" title="Ulangi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
   </div>
   <div class="vol-row">
-    <span>🔈</span>
+    <span class="vol-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span>
     <input id="volBar" type="range" min="0" max="1" step="0.01" value="0.9">
-    <span>🔊</span>
-    <button id="dlBtn" class="btn-small">⬇ Unduh</button>
+    <button id="dlBtn" class="btn-small"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span>Unduh</span></button>
     <span id="dlState" class="dl-state"></span>
   </div>
   <div id="dlProgressWrap" class="dl-progress-wrap" hidden>
@@ -202,12 +210,12 @@
 <!-- Full-screen Now Playing -->
 <div id="nowPlaying" class="now-playing" hidden>
   <div class="np-top">
-    <button id="npClose" class="icon-btn" title="Tutup">⌄</button>
+    <button id="npClose" class="icon-btn" title="Tutup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button>
     <span class="np-label">Sedang Diputar</span>
-    <button id="npMenuBtn" class="icon-btn" title="Opsi lagu">⋯</button>
+    <button id="npMenuBtn" class="icon-btn" title="Opsi lagu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button>
   </div>
   <div class="np-art-wrap">
-    <div id="npArt" class="np-art">🎵</div>
+    <div id="npArt" class="np-art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></div>
     <canvas id="vizCanvas" class="viz-canvas" width="300" height="64"></canvas>
   </div>
   <div class="np-title" id="npTitle">—</div>
@@ -218,15 +226,15 @@
     <span id="npDurTime">0:00</span>
   </div>
   <div class="controls np-controls">
-    <button id="npShuffleBtn" class="icon-btn" title="Acak">🔀</button>
-    <button id="npPrevBtn" class="icon-btn" title="Sebelumnya">⏮</button>
-    <button id="npPlayBtn" class="icon-btn big" title="Putar/Jeda">▶</button>
-    <button id="npNextBtn" class="icon-btn" title="Berikutnya">⏭</button>
-    <button id="npRepeatBtn" class="icon-btn" title="Ulangi">🔁</button>
+    <button id="npShuffleBtn" class="icon-btn" title="Acak"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+    <button id="npPrevBtn" class="icon-btn" title="Sebelumnya"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.4" y="5" width="2.6" height="14" rx="1"/><path d="M20 6.1v11.8c0 .8-.9 1.3-1.6.9L9 12.9c-.6-.4-.6-1.4 0-1.8l9.4-5.9c.7-.4 1.6.1 1.6.9z"/></svg></button>
+    <button id="npPlayBtn" class="icon-btn big" title="Putar/Jeda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10.2-6.6c.6-.4.6-1.4 0-1.8L9.6 4.5c-.7-.4-1.6.1-1.6.9z"/></svg></button>
+    <button id="npNextBtn" class="icon-btn" title="Berikutnya"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="5" width="2.6" height="14" rx="1"/><path d="M4 6.1v11.8c0 .8.9 1.3 1.6.9l9.4-5.9c.6-.4.6-1.4 0-1.8L5.6 5.2c-.7-.4-1.6.1-1.6.9z"/></svg></button>
+    <button id="npRepeatBtn" class="icon-btn" title="Ulangi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
   </div>
   <div class="np-rows">
     <div class="np-row">
-      <label for="speedSelect">⏩ Kecepatan</label>
+      <label for="speedSelect">Kecepatan</label>
       <select id="speedSelect">
         <option value="0.75">0.75x</option>
         <option value="1" selected>1x (Normal)</option>
@@ -236,7 +244,7 @@
       </select>
     </div>
     <div class="np-row">
-      <label for="sleepSelect">😴 Sleep Timer</label>
+      <label for="sleepSelect"><span class="lbl-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg></span> Sleep Timer</label>
       <select id="sleepSelect">
         <option value="0" selected>Mati</option>
         <option value="15">15 menit</option>
@@ -247,13 +255,13 @@
       <span id="sleepCountdown" class="sleep-countdown"></span>
     </div>
     <div class="np-row">
-      <label for="npVolBar">🔊 Volume</label>
+      <label for="npVolBar"><span class="lbl-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span> Volume</label>
       <input id="npVolBar" type="range" min="0" max="1" step="0.01" value="0.9">
     </div>
     <div class="np-row np-actions">
-      <button id="npFavBtn" class="btn-small">♡ Favorit</button>
+      <button id="npFavBtn" class="btn-small"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg><span>Favorit</span></button>
       <button id="npAddPlaylistBtn" class="btn-small">＋ Playlist</button>
-      <button id="npDlBtn" class="btn-small">⬇ Unduh</button>
+      <button id="npDlBtn" class="btn-small"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span>Unduh</span></button>
     </div>
   </div>
   <h3 class="np-queue-title">Antrean Berikutnya</h3>
@@ -267,8 +275,8 @@
     <div class="modal-title" id="songMenuTitle">Lagu</div>
     <div class="modal-sub" id="songMenuArtist"></div>
     <div class="modal-actions">
-      <button id="songMenuFav" class="btn-small block-btn">♡ Tambah ke Favorit</button>
-      <button id="songMenuDl" class="btn-small block-btn">⬇ Unduh</button>
+      <button id="songMenuFav" class="btn-small block-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg><span>Tambah ke Favorit</span></button>
+      <button id="songMenuDl" class="btn-small block-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span>Unduh</span></button>
     </div>
     <div class="modal-label">Tambah ke playlist:</div>
     <div id="songMenuPlaylists" class="list"></div>
