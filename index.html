@@ -71,6 +71,7 @@
       <input id="scSearchInput" type="search" placeholder="Cari lagu apa saja di SoundCloud…" autocomplete="off">
       <button id="scSearchBtn" class="btn-primary">Cari</button>
     </div>
+    <div id="scChips" class="chips"></div>
     <p class="hint">Streaming langsung dari SoundCloud — lagu apa pun yang ada di sana bisa dicari dan diputar. Ketuk hasil untuk memutar.</p>
     <div id="scStatus" class="status"></div>
     <div id="scResults" class="list"></div>
@@ -127,6 +128,13 @@
       <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
       <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
     </ul>
+    <h3>Fitur baru di v1.4</h3>
+    <ul>
+      <li><strong>SoundCloud diperbaiki</strong> — pencarian dan streaming SoundCloud kini memakai HTTP native (CapacitorHttp) sehingga tidak lagi diblokir di iPhone.</li>
+      <li><strong>Koleksi Amerika</strong> — Jazz, Blues &amp; Folk, dan Country dari Internet Archive: Ella Fitzgerald &amp; Louis Armstrong, Duke Ellington, Miles Davis, Lead Belly, Woody Guthrie, Johnny Cash, Hank Williams III.</li>
+      <li><strong>Indie Indo Kekinian</strong> — Perunggu, Fourtwnty, Hindia, Threesixty, The Jansen, .Feast, Danilla, For Revenge, FSTVLST, langsung dari akun SoundCloud resmi mereka.</li>
+      <li>Genre dan lagu pilihan di Beranda kini hanya musik Amerika dan Indonesia.</li>
+    </ul>
     <h3>Fitur baru di v1.3</h3>
     <ul>
       <li><strong>Putar di latar belakang diperbaiki</strong> — audio kini diputar langsung (tanpa Web Audio) sehingga lagu tetap jalan saat aplikasi diminimalkan atau layar dikunci. Equalizer dihapus karena butuh Web Audio; visualizer diganti animasi simulasi.</li>
@@ -150,7 +158,7 @@
     </ul>
     <h3>Privasi</h3>
     <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
-    <p class="version">Musikku v1.3 — PWA + Capacitor (iOS)</p>
+    <p class="version">Musikku v1.4 — PWA + Capacitor (iOS)</p>
   </section>
 </main>
 
