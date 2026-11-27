@@ -1,0 +1,21 @@
+{
+  "name": "music-player",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync-www": "cp index.html app.js styles.css sw.js manifest.json www/ && rm -rf www/icons && cp -r icons www/ && npx cap sync"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/cli": "^7.6.11",
+    "@capacitor/core": "^7.6.11",
+    "@capacitor/ios": "^7.6.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
