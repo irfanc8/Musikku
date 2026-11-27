@@ -261,6 +261,10 @@ body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
 .np-queue-title { font-size: 17px; margin: 20px 0 6px; }
 .np-queue { padding-bottom: 12px; }
 
+/* Koleksi Pilihan (v1.2) */
+.collection-group-title { font-size: 16px; font-weight: 700; margin: 14px 0 8px; }
+.collection-card { flex-basis: 170px; }
+
 /* Progres unduhan */
 .dl-progress-wrap {
   margin-top: 8px; height: 18px; background: var(--surface2);
