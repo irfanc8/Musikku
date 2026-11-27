@@ -1,7 +1,10 @@
-/* Musikku v1.2 — pemutar musik online (Internet Archive) + offline (unduhan & file lokal)
-   Fitur: Now Playing layar penuh + visualizer, playlist, riwayat, sleep timer,
-   kecepatan putar, equalizer, manajer unduhan, beranda, tema terang/gelap, Media Session API,
-   Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo). */
+/* Musikku v1.3 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
+   Fitur: Now Playing layar penuh + visualizer simulasi, playlist, riwayat, sleep timer,
+   kecepatan putar, manajer unduhan, beranda, tema terang/gelap, Media Session API,
+   Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo), SoundCloud.
+   v1.3: audio diputar LANGSUNG oleh <audio> (tanpa Web Audio) agar tetap jalan di latar
+   belakang iOS; equalizer dihapus (butuh Web Audio); visualizer diganti animasi simulasi;
+   tampilan terinspirasi SoundCloud (aksen oranye, waveform seek bar). */
 (function () {
   'use strict';
 
@@ -50,6 +53,7 @@
     return (t.charAt(0) || '?').toUpperCase();
   }
   function trackThumb(t) {
+    if (t && t.artwork) return t.artwork;
     if (t && t.identifier) return 'https://archive.org/services/img/' + encodeURIComponent(t.identifier);
     return null;
   }
@@ -140,72 +144,45 @@
   function currentTrack() { return (qi >= 0 && qi < queue.length) ? queue[qi] : null; }
   function setStatus(msg) { const el = $('#statusLine'); if (el) el.textContent = msg; }
 
-  /* ---------- Web Audio: SATU AudioContext + SATU MediaElementSource ----------
-     Dipakai bersama oleh visualizer DAN equalizer (jangan buat yang kedua). */
-  let actx = null, analyser = null, eqFilters = null, audioGraphReady = false;
-  const EQ_PRESETS = {
-    normal: [0, 0, 0],
-    bass: [7, 1, -2],
-    treble: [-2, 0, 6],
-    pop: [2, 3, 3],
-    rock: [5, -2, 4],
-    jazz: [3, 2, 4],
-    vocal: [-2, 4, 2]
-  };
-  let eqPreset = store.get('musikku_eq', 'normal');
-  function ensureAudioGraph() {
-    if (audioGraphReady) { if (actx && actx.state === 'suspended') actx.resume().catch(() => {}); return; }
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      actx = new AC();
-      const src = actx.createMediaElementSource(audio);
-      const low = actx.createBiquadFilter(); low.type = 'lowshelf'; low.frequency.value = 200;
-      const mid = actx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 1;
-      const high = actx.createBiquadFilter(); high.type = 'highshelf'; high.frequency.value = 4000;
-      analyser = actx.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = 0.75;
-      src.connect(low); low.connect(mid); mid.connect(high); high.connect(analyser); analyser.connect(actx.destination);
-      eqFilters = { low: low, mid: mid, high: high };
-      applyEqPreset(eqPreset);
-      audioGraphReady = true;
-      if (actx.state === 'suspended') actx.resume().catch(() => {});
-    } catch (e) { /* Web Audio tidak tersedia — pemutaran tetap jalan tanpa EQ/visualizer */ }
-  }
-  function applyEqPreset(name) {
-    eqPreset = EQ_PRESETS[name] ? name : 'normal';
-    store.set('musikku_eq', eqPreset);
-    if (!eqFilters) return;
-    const g = EQ_PRESETS[eqPreset];
-    eqFilters.low.gain.value = g[0];
-    eqFilters.mid.gain.value = g[1];
-    eqFilters.high.gain.value = g[2];
-  }
+  /* ---------- Pemutaran langsung (tanpa Web Audio) ----------
+     v1.3: <audio> diputar LANGSUNG (jalur media native) agar iOS tetap memutarnya saat
+     aplikasi diminimalkan / layar dikunci (UIBackgroundModes=audio). Web Audio
+     (MediaElementSource) TIDAK dipakai — konteksnya disuspend iOS di latar belakang
+     dan menghentikan audio. Karena itu equalizer dihapus dan visualizer diganti
+     animasi simulasi (lihat drawVisualizer). */
 
-  /* ---------- visualizer (canvas frequency bars) ---------- */
+  /* ---------- visualizer SIMULASI (animasi bar, bukan data frekuensi) ----------
+     v1.3: tanpa Web Audio, tidak ada data frekuensi asli. Bar dianimasikan dari waktu
+     pemutaran (audio.currentTime) + fase per bar — gerakannya halus dan mengikuti
+     ritme putar/jeda. Saat dijeda, bar mereda ke level datar. */
   let vizRaf = null;
+  const VIZ_BARS = 28;
+  const vizLevels = new Array(VIZ_BARS).fill(0.06);
+  function vizTarget(i, t) {
+    // gabungan dua gelombang sinus + variasi per bar (deterministik per bar & waktu)
+    const a = Math.sin(t * 2.1 + i * 0.9) * 0.5 + 0.5;
+    const b = Math.sin(t * 3.7 + i * 0.35 + 1.7) * 0.5 + 0.5;
+    const c = Math.sin(t * 0.9 + i * 1.9) * 0.5 + 0.5;
+    return 0.12 + 0.75 * (a * 0.55 + b * 0.30 + c * 0.15);
+  }
   function drawVisualizer() {
     const canvas = $('#vizCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
-    let data = null;
-    if (analyser) {
-      data = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(data);
-    }
-    const bars = 28;
+    const playing = !audio.paused && !!currentTrack();
+    const t = audio.currentTime || 0;
+    const bars = VIZ_BARS;
     const bw = W / bars;
     for (let i = 0; i < bars; i++) {
-      let v = 0.08;
-      if (data) v = Math.max(0.06, (data[Math.floor((i / bars) * data.length)] || 0) / 255);
-      if (audio.paused) v = 0.06;
+      const target = playing ? vizTarget(i, t) : 0.06;
+      vizLevels[i] += (target - vizLevels[i]) * 0.18;
+      const v = Math.max(0.05, Math.min(1, vizLevels[i]));
       const bh = Math.max(3, v * H);
       const grad = ctx.createLinearGradient(0, H, 0, H - bh);
-      grad.addColorStop(0, '#fa2d48');
-      grad.addColorStop(1, '#ff9a5c');
+      grad.addColorStop(0, '#ff6a00');
+      grad.addColorStop(1, '#ffb347');
       ctx.fillStyle = grad;
       const x = i * bw + 2;
       ctx.beginPath();
@@ -246,7 +223,7 @@
     if (!('mediaSession' in navigator)) return;
     try {
       const ms = navigator.mediaSession;
-      ms.setActionHandler('play', () => { ensureAudioGraph(); audio.play().catch(() => {}); });
+      ms.setActionHandler('play', () => { audio.play().catch(() => {}); });
       ms.setActionHandler('pause', () => audio.pause());
       ms.setActionHandler('previoustrack', () => prevTrack());
       ms.setActionHandler('nexttrack', () => nextTrack());
@@ -317,6 +294,69 @@
     });
   }
 
+  /* ---------- SoundCloud API v2 ----------
+     client_id publik yang diambil dari JavaScript web player SoundCloud (terverifikasi
+     2026-11-27: pencarian HTTP 200, stream HLS ter-resolve ke playlist .m3u8 yang valid).
+     Client_id ini bisa kedaluwarsa sewaktu-waktu; kalau pencarian gagal, aplikasi
+     menampilkan pesan dan menyarankan pencarian Internet Archive.
+     Stream: transcodings HLS (iOS Safari/WKWebView memutar HLS secara native).
+     URL stream di-resolve saat lagu diputar (bukan saat pencarian) karena URL-nya
+     bertanda tangan dan cepat kedaluwarsa. */
+  const SC_CLIENT_ID = 'zQBXL76oebJv6L1OhUMMtNEmdG6Th0wF';
+  const SC_API = 'https://api-v2.soundcloud.com';
+  function scArtwork(t) {
+    const a = t.artwork_url || (t.user && t.user.avatar_url) || '';
+    if (!a) return '';
+    return a.replace('-large.', '-t500x500.').replace('-large.jpg', '-t500x500.jpg');
+  }
+  function soundcloudSearch(query, limit) {
+    const url = SC_API + '/search/tracks?' + new URLSearchParams({
+      q: query, client_id: SC_CLIENT_ID, limit: String(limit || 20), linked_partitioning: '1'
+    }).toString();
+    return fetch(url).then((r) => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then((d) => {
+      const list = (d.collection || []).filter((t) => t && t.media && t.media.transcodings && t.media.transcodings.length && t.duration);
+      return list.map((t) => {
+        const trs = t.media.transcodings;
+        const prog = trs.find((x) => x.format && x.format.protocol === 'progressive');
+        const hls = trs.find((x) => x.format && x.format.protocol === 'hls');
+        const chosen = prog || hls;
+        return {
+          id: 'sc:' + t.id,
+          title: t.title || 'Tanpa Judul',
+          artist: (t.user && t.user.username) || 'SoundCloud',
+          album: 'SoundCloud',
+          url: '', // diisi saat diputar (resolveSoundCloudStream)
+          duration: Math.round((t.duration || 0) / 1000),
+          source: 'soundcloud',
+          artwork: scArtwork(t),
+          streamUrl: chosen ? chosen.url : '',
+          streamProtocol: chosen ? chosen.format.protocol : ''
+        };
+      }).filter((t) => t.streamUrl);
+    });
+  }
+  /* Resolve URL stream SoundCloud (transcoding URL + client_id -> JSON {url}). */
+  function resolveSoundCloudStream(t) {
+    if (!t.streamUrl) return Promise.reject(new Error('no stream'));
+    if (t._resolvedUrl && t._resolvedAt && (Date.now() - t._resolvedAt) < 20 * 60 * 1000) {
+      return Promise.resolve(t._resolvedUrl);
+    }
+    return fetch(t.streamUrl + (t.streamUrl.indexOf('?') === -1 ? '?' : '&') + 'client_id=' + SC_CLIENT_ID)
+      .then((r) => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then((d) => {
+        if (!d.url) throw new Error('no url');
+        t._resolvedUrl = d.url;
+        t._resolvedAt = Date.now();
+        return d.url;
+      });
+  }
+
   /* ---------- playback ---------- */
   function playAt(list, index) {
     if (!list || !list.length) return;
@@ -332,6 +372,8 @@
     $('#nowTitle').textContent = t.title;
     $('#nowArtist').textContent = t.artist + (t.album ? ' — ' + t.album : '');
     setPlayerArt(t);
+    waveMini.setTrack(t);
+    waveNp.setTrack(t);
     updateFavBtn();
     updateDlBtn();
     updateQueueLine();
@@ -343,10 +385,26 @@
       if (audio._objUrl) URL.revokeObjectURL(audio._objUrl);
       audio._objUrl = URL.createObjectURL(t._blob);
       audio.src = audio._objUrl;
+      if (autoplay) { audio.play().catch(() => {}); }
+    } else if (t.source === 'soundcloud') {
+      // Resolve URL stream saat diputar (URL bertanda tangan, cepat kedaluwarsa).
+      setStatus('Memuat stream SoundCloud…');
+      resolveSoundCloudStream(t).then((streamUrl) => {
+        if (currentTrack() !== t) return; // sudah pindah lagu
+        audio.src = streamUrl;
+        if (autoplay) { audio.play().catch(() => {}); }
+      }).catch(() => {
+        if (currentTrack() !== t) return;
+        setStatus('Gagal memuat stream SoundCloud. Coba lagu lain atau periksa internet.');
+      });
+      pushRecent(t);
+      renderRecent();
+      renderHomeRecent();
+      return;
     } else {
       audio.src = t.url;
+      if (autoplay) { audio.play().catch(() => {}); }
     }
-    if (autoplay) { ensureAudioGraph(); audio.play().catch(() => {}); }
     pushRecent(t);
     renderRecent();
     renderHomeRecent();
@@ -363,7 +421,6 @@
   }
   function togglePlay() {
     if (!currentTrack()) return;
-    ensureAudioGraph();
     if (audio.paused) audio.play().catch(() => {}); else audio.pause();
   }
   function nextTrack() {
@@ -405,21 +462,87 @@
     if (npC) npC.textContent = cur;
     if (npD) npD.textContent = dur;
     if (d > 0) {
-      const pct = String((audio.currentTime / d) * 100);
-      $('#seekBar').value = pct;
-      const npS = $('#npSeekBar');
-      if (npS && document.activeElement !== npS) npS.value = pct;
+      const frac = audio.currentTime / d;
+      waveMini.setProgress(frac);
+      waveNp.setProgress(frac);
     }
   });
   audio.addEventListener('loadedmetadata', () => { $('#durTime').textContent = fmtTime(audio.duration || 0); });
-  function bindSeek(input) {
-    input.addEventListener('input', (e) => {
+
+  /* ---------- Waveform seek bar (gaya SoundCloud, bukan salinan) ----------
+     Batang-batang gelombang deterministik per lagu (seed dari hash id lagu) —
+     bentuknya stabil tiap lagu. Bagian yang sudah diputar berwarna oranye,
+     sisanya abu-abu. Ketuk/seret untuk seek. */
+  function makeWaveSeek(canvas) {
+    const ws = { canvas: canvas, bars: [], progress: 0, dragging: false };
+    function seedFrom(str) {
+      let h = 2166136261;
+      const s = String(str || '?');
+      for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return h >>> 0;
+    }
+    function regen(track) {
+      let x = seedFrom(track ? track.id : 'musikku');
+      const n = 64;
+      ws.bars = [];
+      for (let i = 0; i < n; i++) {
+        x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+        const r = x / 4294967296;
+        const env = 0.55 + 0.45 * Math.sin((i / n) * Math.PI);
+        ws.bars.push(0.15 + 0.85 * r * env);
+      }
+      ws.progress = 0;
+      draw();
+    }
+    function draw() {
+      const c = ws.canvas;
+      const dpr = window.devicePixelRatio || 1;
+      const w = c.clientWidth, h = c.clientHeight;
+      if (!w || !h) return;
+      if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+      const ctx = c.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const n = ws.bars.length;
+      const gap = 2, bw = (w - gap * (n - 1)) / n;
+      for (let i = 0; i < n; i++) {
+        const bh = Math.max(3, ws.bars[i] * h);
+        const x = i * (bw + gap);
+        const played = (i + 0.5) / n <= ws.progress;
+        ctx.fillStyle = played ? '#ff6a00' : 'rgba(150,150,155,0.55)';
+        const y = (h - bh) / 2;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, bw, bh, 1.5); else ctx.rect(x, y, bw, bh);
+        ctx.fill();
+      }
+    }
+    function fracFromEvent(e) {
+      const r = ws.canvas.getBoundingClientRect();
+      return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    }
+    function seekTo(frac) {
       const d = audio.duration || 0;
-      if (d > 0) audio.currentTime = (parseFloat(e.target.value) / 100) * d;
+      if (d > 0) audio.currentTime = frac * d;
+      ws.progress = frac;
+      draw();
+    }
+    ws.canvas.addEventListener('pointerdown', (e) => {
+      ws.dragging = true;
+      try { ws.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      seekTo(fracFromEvent(e));
     });
+    ws.canvas.addEventListener('pointermove', (e) => { if (ws.dragging) seekTo(fracFromEvent(e)); });
+    ws.canvas.addEventListener('pointerup', () => { ws.dragging = false; });
+    ws.canvas.addEventListener('pointercancel', () => { ws.dragging = false; });
+    ws.setTrack = regen;
+    ws.setProgress = (f) => { ws.progress = Math.min(1, Math.max(0, f)); draw(); };
+    ws.redraw = draw;
+    return ws;
   }
-  bindSeek($('#seekBar'));
-  bindSeek($('#npSeekBar'));
+  const waveMini = makeWaveSeek($('#waveMini'));
+  const waveNp = makeWaveSeek($('#waveNp'));
+  waveMini.setTrack(null);
+  waveNp.setTrack(null);
   function bindVolume(input) {
     input.addEventListener('input', (e) => {
       audio.volume = parseFloat(e.target.value);
@@ -496,7 +619,7 @@
   /* ---------- favorites / recent ---------- */
   function isFav(id) { return favs.some((f) => f.id === id); }
   function serializableTrack(t) {
-    return { id: t.id, title: t.title, artist: t.artist, album: t.album || '', url: t.url, duration: t.duration || 0, source: t.source, identifier: t.identifier || '', filename: t.filename || '' };
+    return { id: t.id, title: t.title, artist: t.artist, album: t.album || '', url: t.url, duration: t.duration || 0, source: t.source, identifier: t.identifier || '', filename: t.filename || '', artwork: t.artwork || '', streamUrl: t.streamUrl || '' };
   }
   function toggleFav() {
     const t = currentTrack();
@@ -531,8 +654,8 @@
     if (!recent.length) { box.innerHTML = '<p class="hint">Belum ada riwayat. Putar sebuah lagu dulu.</p>'; return; }
     box.innerHTML = '';
     recent.forEach((r, i) => {
-      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename };
-      box.appendChild(trackRow(t, recent.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename })), i));
+      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename, artwork: r.artwork || '', streamUrl: r.streamUrl || '' };
+      box.appendChild(trackRow(t, recent.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename, artwork: x.artwork || '', streamUrl: x.streamUrl || '' })), i));
     });
   }
   function renderHomeRecent() {
@@ -542,8 +665,8 @@
     if (!items.length) { box.innerHTML = '<p class="hint">Belum ada lagu yang diputar.</p>'; return; }
     box.innerHTML = '';
     items.forEach((r, i) => {
-      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename };
-      box.appendChild(trackRow(t, recent.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename })), i));
+      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename, artwork: r.artwork || '', streamUrl: r.streamUrl || '' };
+      box.appendChild(trackRow(t, recent.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename, artwork: x.artwork || '', streamUrl: x.streamUrl || '' })), i));
     });
   }
   $('#clearRecentBtn').addEventListener('click', () => {
@@ -769,7 +892,7 @@
         '<button class="btn-small pl-del">Hapus</button></div>';
       div.querySelector('.pl-play').addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (pl.tracks.length) playAt(pl.tracks.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename })), 0);
+        if (pl.tracks.length) playAt(pl.tracks.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename, artwork: x.artwork || '', streamUrl: x.streamUrl || '' })), 0);
       });
       div.querySelector('.pl-open').addEventListener('click', () => { openPlaylistId = pl.id; renderPlaylists(); renderPlaylistDetail(pl.id); });
       div.querySelector('.pl-del').addEventListener('click', (ev) => { ev.stopPropagation(); if (confirm('Hapus playlist "' + pl.name + '"?')) deletePlaylist(pl.id); });
@@ -785,13 +908,13 @@
     if (!pl.tracks.length) { box.innerHTML = '<p class="hint">Playlist ini masih kosong. Tambahkan lagu dari menu ⋯ pada lagu.</p>'; return; }
     box.innerHTML = '';
     pl.tracks.forEach((r, i) => {
-      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename };
+      const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename, artwork: r.artwork || '', streamUrl: r.streamUrl || '' };
       const div = document.createElement('div');
       div.className = 'track';
       div.innerHTML = '<span class="t-num">' + (i + 1) + '</span>' +
         '<div class="t-info"><div class="t-title">' + esc(r.title) + '</div>' +
         '<div class="t-sub">' + esc(r.artist) + (r.duration ? ' · ' + fmtTime(r.duration) : '') + '</div></div>';
-      div.addEventListener('click', () => playAt(pl.tracks.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename })), i));
+      div.addEventListener('click', () => playAt(pl.tracks.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename, artwork: x.artwork || '', streamUrl: x.streamUrl || '' })), i));
       const del = document.createElement('button');
       del.className = 'btn-small'; del.textContent = 'Hapus';
       del.addEventListener('click', (ev) => { ev.stopPropagation(); removeTrackFromPlaylist(pl.id, r.id); });
@@ -894,8 +1017,8 @@
     if (!favs.length) { box.innerHTML = '<p class="hint">Belum ada favorit. Tekan ikon ♥ pada lagu yang sedang diputar.</p>'; return; }
     box.innerHTML = '';
     favs.forEach((f, i) => {
-      const t = { id: f.id, title: f.title, artist: f.artist, album: f.album, url: f.url, duration: f.duration, source: f.source, identifier: f.identifier, filename: f.filename };
-      box.appendChild(trackRow(t, favs.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename })), i));
+      const t = { id: f.id, title: f.title, artist: f.artist, album: f.album, url: f.url, duration: f.duration, source: f.source, identifier: f.identifier, filename: f.filename, artwork: f.artwork || '', streamUrl: f.streamUrl || '' };
+      box.appendChild(trackRow(t, favs.map((x) => ({ id: x.id, title: x.title, artist: x.artist, album: x.album, url: x.url, duration: x.duration, source: x.source, identifier: x.identifier, filename: x.filename, artwork: x.artwork || '', streamUrl: x.streamUrl || '' })), i));
     });
   }
 
@@ -952,6 +1075,7 @@
     document.body.style.overflow = 'hidden';
     updateNpFields();
     renderNpQueue();
+    waveNp.redraw();
     startVizLoop();
   }
   function closeNowPlaying() {
@@ -964,7 +1088,7 @@
     openNowPlaying();
   });
   $('#npClose').addEventListener('click', closeNowPlaying);
-  $('#eqPreset').addEventListener('change', (e) => { ensureAudioGraph(); applyEqPreset(e.target.value); });
+  /* (Equalizer dihapus di v1.3 — butuh Web Audio, yang mematikan pemutaran latar belakang.) */
 
   /* ---------- search / browse ---------- */
   const GENRES = [
@@ -987,7 +1111,6 @@
   }
   GENRES.forEach((g) => {
     $('#genreChips').appendChild(makeGenreChip(g));
-    $('#genreChipsHome').appendChild(makeGenreChip(g));
   });
   function runSearch(query, label) {
     setStatus('Mencari "' + (label || query) + '"…');
@@ -1005,6 +1128,26 @@
     if (q) { switchTab('jelajah'); runSearch(q); }
   });
   $('#searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const q = e.target.value.trim(); if (q) { switchTab('jelajah'); runSearch(q); } } });
+
+  /* ---------- SoundCloud: cari & putar ---------- */
+  function runSoundCloudSearch(query) {
+    const st = $('#scStatus'), box = $('#scResults');
+    st.textContent = 'Mencari di SoundCloud…';
+    box.innerHTML = '';
+    soundcloudSearch(query, 20).then((tracks) => {
+      if (!tracks.length) { st.textContent = 'Tidak ditemukan di SoundCloud untuk "' + query + '". Coba kata kunci lain.'; return; }
+      st.textContent = tracks.length + ' lagu ditemukan di SoundCloud — ketuk untuk memutar.';
+      tracks.forEach((t, i) => box.appendChild(trackRow(t, tracks, i)));
+      markPlayingRow();
+    }).catch(() => {
+      st.textContent = 'SoundCloud tidak bisa dijangkau sekarang (mungkin client_id kedaluwarsa). Coba lagi nanti, atau cari lewat Internet Archive.';
+    });
+  }
+  $('#scSearchBtn').addEventListener('click', () => {
+    const q = $('#scSearchInput').value.trim();
+    if (q) runSoundCloudSearch(q);
+  });
+  $('#scSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const q = e.target.value.trim(); if (q) runSoundCloudSearch(q); } });
 
   /* ---------- tabs ---------- */
   function switchTab(name) {
@@ -1176,8 +1319,6 @@
 
   /* ---------- init ---------- */
   applyTheme();
-  const eqSel = $('#eqPreset');
-  if (eqSel) eqSel.value = eqPreset;
   setupMediaSessionHandlers();
   refreshDownloadedIds().then(() => { renderDownloads(); renderMyFiles(); });
   renderFavs();
