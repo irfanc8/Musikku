@@ -26,6 +26,33 @@ jobs:
       - name: Sync web assets
         run: npx cap sync
 
+      - name: Set app version to 1.1
+        run: |
+          python3 - <<'EOF'
+          import re
+          p = "ios/App/App.xcodeproj/project.pbxproj"
+          s = open(p).read()
+          s2 = re.sub(r"MARKETING_VERSION = [^;]+;", "MARKETING_VERSION = 1.1;", s)
+          open(p, "w").write(s2)
+          print("MARKETING_VERSION set to 1.1")
+          EOF
+
+      - name: Enable background audio
+        run: |
+          python3 - <<'EOF'
+          import plistlib
+          p = "ios/App/App/Info.plist"
+          with open(p, "rb") as f:
+              plist = plistlib.load(f)
+          modes = plist.get("UIBackgroundModes", [])
+          if "audio" not in modes:
+              modes.append("audio")
+          plist["UIBackgroundModes"] = modes
+          with open(p, "wb") as f:
+              plistlib.dump(plist, f)
+          print("UIBackgroundModes:", plist["UIBackgroundModes"])
+          EOF
+
       - name: Build unsigned IPA
         run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -derivedDataPath ios/App/build
 
