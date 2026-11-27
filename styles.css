@@ -1,12 +1,12 @@
-/* Musikku — tema gelap gaya iOS (ala Apple Music) */
+/* Musikku — tema gelap gaya iOS, aksen oranye terinspirasi SoundCloud (bukan salinan) */
 :root {
   --bg: #000000;
   --surface: #1c1c1e;
   --surface2: #2c2c2e;
   --text: #f5f5f7;
   --muted: #98989d;
-  --accent: #fa2d48;
-  --accent2: #ff375f;
+  --accent: #ff6a00;
+  --accent2: #ff8a3d;
   --border: #38383a;
   --radius: 14px;
 }
@@ -18,7 +18,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.45;
-  padding-bottom: 210px; /* ruang untuk player bar */
+  padding-bottom: 205px; /* ruang untuk player bar */
 }
 .app-header {
   padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px 12px;
@@ -84,8 +84,16 @@ main { padding: 12px 16px 24px; }
 .track .t-num { color: var(--muted); width: 22px; text-align: right; font-size: 13px; flex: 0 0 auto; }
 .track .t-info { flex: 1; min-width: 0; }
 .track .t-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.track .t-sub { color: var(--muted); font-size: 13px; }
+.track .t-sub { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .track.playing .t-title { color: var(--accent); font-weight: 700; }
+/* Penanda oranye pada lagu yang sedang diputar: cincin oranye di sampul + segitiga play. */
+.track.playing .t-art { box-shadow: 0 0 0 2px var(--accent); position: relative; }
+.track.playing .t-art::after {
+  content: '▶'; position: absolute; right: -4px; bottom: -4px;
+  background: var(--accent); color: #fff; font-size: 9px; line-height: 1;
+  width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
 .dl-badge {
   font-size: 11px; font-weight: 700; color: #30d158; border: 1px solid #30d158;
   border-radius: 999px; padding: 2px 7px; flex: 0 0 auto;
@@ -101,7 +109,7 @@ main { padding: 12px 16px 24px; }
 .player.hidden { display: none; }
 .player-info { display: flex; align-items: center; gap: 10px; }
 .player-art {
-  width: 44px; height: 44px; border-radius: 9px; background: var(--surface2);
+  width: 44px; height: 44px; border-radius: 4px; background: var(--surface2);
   display: flex; align-items: center; justify-content: center; font-size: 22px; flex: 0 0 auto;
 }
 .player-text { flex: 1; min-width: 0; }
@@ -110,10 +118,17 @@ main { padding: 12px 16px 24px; }
 .icon-btn {
   background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; padding: 4px 6px;
 }
-.icon-btn.big { font-size: 30px; }
+.icon-btn.big {
+  font-size: 28px; background: var(--accent); color: #fff;
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
 .icon-btn.on { color: var(--accent); }
 .icon-btn.faved { color: var(--accent); }
 .seek-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+/* Waveform seek bar (gaya SoundCloud): batang gelombang, oranye = sudah diputar. */
+.wave-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.wave-seek { flex: 1; min-width: 0; height: 36px; cursor: pointer; touch-action: none; display: block; }
 .seek-row input[type="range"], .vol-row input[type="range"] { flex: 1; accent-color: var(--accent); }
 .controls { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 2px; }
 .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 14px; }
@@ -165,9 +180,9 @@ body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
 .btn-primary, .btn-small, .chip, .icon-btn { transition: opacity 0.15s ease, transform 0.1s ease, background 0.2s ease; }
 .btn-primary:active, .btn-small:active { transform: scale(0.97); }
 
-/* Sampul kecil di daftar lagu */
+/* Sampul kotak di daftar lagu (gaya SoundCloud) */
 .t-art {
-  width: 44px; height: 44px; border-radius: 9px; flex: 0 0 auto;
+  width: 44px; height: 44px; border-radius: 4px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 800; font-size: 18px; overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -235,13 +250,14 @@ body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
   width: 100%; aspect-ratio: 1; border-radius: 20px;
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 64px; font-weight: 800; overflow: hidden;
-  box-shadow: 0 16px 48px rgba(250, 45, 72, 0.35);
+  box-shadow: 0 16px 48px rgba(255, 106, 0, 0.35);
 }
 .np-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .viz-canvas { width: 100%; height: 64px; margin-top: 12px; display: block; }
 .np-title { font-size: 22px; font-weight: 800; text-align: center; margin-top: 6px; }
 .np-artist { font-size: 15px; color: var(--muted); text-align: center; margin-top: 2px; }
-.np-seek { margin-top: 14px; }
+.np-seek { margin-top: 12px; }
+.np-seek .wave-seek { height: 40px; }
 .np-controls { margin-top: 10px; gap: 22px; }
 .np-rows { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 .np-row { display: flex; align-items: center; gap: 10px; }
@@ -262,7 +278,7 @@ body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
 .np-queue { padding-bottom: 12px; }
 
 /* Koleksi Pilihan (v1.2) */
-.collection-group-title { font-size: 16px; font-weight: 700; margin: 14px 0 8px; }
+.collection-group-title { font-size: 16px; font-weight: 700; margin: 16px 0 8px; }
 .collection-card { flex-basis: 170px; }
 
 /* Progres unduhan */
@@ -271,7 +287,7 @@ body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
   border-radius: 999px; overflow: hidden; position: relative;
 }
 .dl-progress-bar {
-  height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #ff9a5c);
+  height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #ffb347);
   border-radius: 999px; transition: width 0.2s ease;
 }
 .dl-progress-text {
