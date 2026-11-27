@@ -1,4 +1,4 @@
-/* Musikku v1.4 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
+/* Musikku v1.5 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
    Fitur: Now Playing layar penuh + visualizer simulasi, playlist, riwayat, sleep timer,
    kecepatan putar, manajer unduhan, beranda, tema terang/gelap, Media Session API,
    Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo), SoundCloud.
@@ -7,7 +7,11 @@
    tampilan terinspirasi SoundCloud (aksen oranye, waveform seek bar).
    v1.4: SoundCloud memakai CapacitorHttp (HTTP native, tanpa CORS) — fetch() biasa diblokir
    api-v2.soundcloud.com dari origin capacitor://localhost. Koleksi Amerika (Archive) +
-   Indie Indo Kekinian (akun SoundCloud resmi); konten kurasi hanya Amerika + Indonesia. */
+   Indie Indo Kekinian (akun SoundCloud resmi); konten kurasi hanya Amerika + Indonesia.
+   v1.5: perbaikan ganti lagu saat sedang memutar (pause + load + play aman + token urutan
+   resolve SoundCloud); foto asli di kartu koleksi & baris lagu; ikon pemain SVG kustom +
+   tema hangat; koleksi workaround via SoundCloud untuk lagu Indo trending yang tidak ada
+   di akun resmi (Barasuara, Nadin Amizah, The Jansen, Threesixty, .Feast Tarot/Nina). */
 (function () {
   'use strict';
 
@@ -60,6 +64,32 @@
     if (t && t.identifier) return 'https://archive.org/services/img/' + encodeURIComponent(t.identifier);
     return null;
   }
+  /* ---------- ikon SVG kustom (v1.5) ----------
+     Semua ikon pemain digambar sebagai SVG inline — bukan emoji/karakter dasar.
+     Gaya konsisten: fill currentColor, viewBox 24, aksen oranye lewat CSS. */
+  const ICONS = {
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10.2-6.6c.6-.4.6-1.4 0-1.8L9.6 4.5c-.7-.4-1.6.1-1.6.9z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.8" width="4.2" height="14.4" rx="1.4"/><rect x="13.8" y="4.8" width="4.2" height="14.4" rx="1.4"/></svg>',
+    prev: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.4" y="5" width="2.6" height="14" rx="1"/><path d="M20 6.1v11.8c0 .8-.9 1.3-1.6.9L9 12.9c-.6-.4-.6-1.4 0-1.8l9.4-5.9c.7-.4 1.6.1 1.6.9z"/></svg>',
+    next: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="5" width="2.6" height="14" rx="1"/><path d="M4 6.1v11.8c0 .8.9 1.3 1.6.9l9.4-5.9c.6-.4.6-1.4 0-1.8L5.6 5.2c-.7-.4-1.6.1-1.6.9z"/></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>',
+    repeatOne: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+    heartOutline: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg>',
+    download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+    volume: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm20 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 20v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0-1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>',
+    chevronDown: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>',
+    more: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+    note: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>',
+    sparkle: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2zm7 11l.9 2.9 2.9.9-2.9.9-.9 2.9-.9-2.9-2.9-.9 2.9-.9.9-2.9z"/></svg>'
+  };
+  function icon(name) { return ICONS[name] || ''; }
   /* Data URL sampul gradien (fallback artwork untuk Media Session saat tanpa thumbnail). */
   const artUrlCache = {};
   function gradientArtDataURL(title) {
@@ -97,7 +127,7 @@
     const theme = store.get('musikku_theme', 'dark');
     document.body.classList.toggle('light', theme === 'light');
     const btn = $('#themeToggle');
-    if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
+    if (btn) btn.innerHTML = icon(theme === 'light' ? 'sun' : 'moon');
   }
   function toggleTheme() {
     const cur = store.get('musikku_theme', 'dark');
@@ -386,7 +416,27 @@
       });
   }
 
-  /* ---------- playback ---------- */
+  /* ---------- playback ----------
+     v1.5 — perbaikan ganti lagu saat sedang memutar. Akar masalah: mengganti audio.src
+     saat lagu sedang jalan lalu langsung memanggil play() membuat iOS menolak play()
+     (AbortError — play yang tertunda dibatalkan oleh load baru), dan .catch(()=>{})
+     menelan penolakan itu diam-diam sehingga lagu baru tidak pernah bunyi padahal judul
+     di UI sudah berubah. Perbaikan: pause dulu, ganti src, panggil load(), lalu play()
+     lewat playAudioSafe() yang mencoba lagi sekali saat canplay/timeout bila ditolak.
+     Resolve SoundCloud yang sudah kedaluwarsa diabaikan lewat token urutan (playSeq),
+     bukan hanya perbandingan objek — jadi resolve lama tidak bisa menimpa lagu baru. */
+  let playSeq = 0;
+  function playAudioSafe() {
+    let p = null;
+    try { p = audio.play(); } catch (e) { p = null; }
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        const retry = () => { try { const q = audio.play(); if (q && q.catch) q.catch(() => {}); } catch (e) {} };
+        audio.addEventListener('canplay', retry, { once: true });
+        setTimeout(retry, 350);
+      });
+    }
+  }
   function playAt(list, index) {
     if (!list || !list.length) return;
     queue = list.slice();
@@ -396,6 +446,7 @@
   function loadCurrent(autoplay) {
     const t = currentTrack();
     if (!t) return;
+    const seq = ++playSeq;
     const bar = $('#playerBar');
     bar.classList.remove('hidden');
     $('#nowTitle').textContent = t.title;
@@ -413,17 +464,21 @@
     if (t.source === 'import' && t._blob) {
       if (audio._objUrl) URL.revokeObjectURL(audio._objUrl);
       audio._objUrl = URL.createObjectURL(t._blob);
+      audio.pause();
       audio.src = audio._objUrl;
-      if (autoplay) { audio.play().catch(() => {}); }
+      audio.load();
+      if (autoplay) playAudioSafe();
     } else if (t.source === 'soundcloud') {
       // Resolve URL stream saat diputar (URL bertanda tangan, cepat kedaluwarsa).
       setStatus('Memuat stream SoundCloud…');
       resolveSoundCloudStream(t).then((streamUrl) => {
-        if (currentTrack() !== t) return; // sudah pindah lagu
+        if (seq !== playSeq || currentTrack() !== t) return; // sudah pindah lagu — abaikan
+        audio.pause();
         audio.src = streamUrl;
-        if (autoplay) { audio.play().catch(() => {}); }
+        audio.load();
+        if (autoplay) playAudioSafe();
       }).catch(() => {
-        if (currentTrack() !== t) return;
+        if (seq !== playSeq || currentTrack() !== t) return;
         setStatus('Gagal memuat stream SoundCloud. Coba lagu lain atau periksa internet.');
       });
       pushRecent(t);
@@ -431,8 +486,10 @@
       renderHomeRecent();
       return;
     } else {
+      audio.pause();
       audio.src = t.url;
-      if (autoplay) { audio.play().catch(() => {}); }
+      audio.load();
+      if (autoplay) playAudioSafe();
     }
     pushRecent(t);
     renderRecent();
@@ -445,16 +502,16 @@
     if (thumb) {
       art.innerHTML = '<img src="' + esc(thumb) + '" alt="" onerror="this.remove()">';
     } else {
-      art.textContent = coverLetter(t.title);
+      art.innerHTML = icon('note');
     }
   }
   function togglePlay() {
     if (!currentTrack()) return;
-    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+    if (audio.paused) playAudioSafe(); else audio.pause();
   }
   function nextTrack() {
     if (!queue.length) return;
-    if (repeatMode === 2) { audio.currentTime = 0; audio.play().catch(() => {}); return; }
+    if (repeatMode === 2) { audio.currentTime = 0; playAudioSafe(); return; }
     if (shuffle) {
       let n = qi;
       if (queue.length > 1) { while (n === qi) n = Math.floor(Math.random() * queue.length); }
@@ -474,12 +531,12 @@
     loadCurrent(true);
   }
   function syncPlayButtons() {
-    const icon = audio.paused ? '▶' : '⏸';
-    $('#playBtn').textContent = icon;
+    const name = audio.paused ? 'play' : 'pause';
+    $('#playBtn').innerHTML = icon(name);
     const np = $('#npPlayBtn');
-    if (np) np.textContent = icon;
+    if (np) np.innerHTML = icon(name);
   }
-  audio.addEventListener('ended', () => { if (repeatMode === 2) { audio.currentTime = 0; audio.play().catch(() => {}); } else nextTrack(); });
+  audio.addEventListener('ended', () => { if (repeatMode === 2) { audio.currentTime = 0; playAudioSafe(); } else nextTrack(); });
   audio.addEventListener('play', () => { syncPlayButtons(); markPlayingRow(); });
   audio.addEventListener('pause', () => { syncPlayButtons(); markPlayingRow(); });
   audio.addEventListener('timeupdate', () => {
@@ -594,8 +651,8 @@
     const on = repeatMode > 0;
     $('#repeatBtn').classList.toggle('on', on);
     $('#npRepeatBtn').classList.toggle('on', on);
-    $('#repeatBtn').textContent = repeatMode === 2 ? '🔂' : '🔁';
-    $('#npRepeatBtn').textContent = repeatMode === 2 ? '🔂' : '🔁';
+    $('#repeatBtn').innerHTML = icon(repeatMode === 2 ? 'repeatOne' : 'repeat');
+    $('#npRepeatBtn').innerHTML = icon(repeatMode === 2 ? 'repeatOne' : 'repeat');
   }
   function toggleShuffle() { shuffle = !shuffle; syncShuffleRepeat(); updateQueueLine(); }
   function cycleRepeat() { repeatMode = (repeatMode + 1) % 3; syncShuffleRepeat(); updateQueueLine(); }
@@ -614,7 +671,7 @@
   let sleepTimeoutId = null, sleepCountdownId = null, sleepEndAt = 0;
   function updateSleepUI() {
     const remain = sleepEndAt ? Math.max(0, sleepEndAt - Date.now()) : 0;
-    const label = remain > 0 ? '😴 ' + fmtTime(remain / 1000) : '';
+    const label = remain > 0 ? fmtTime(remain / 1000) : '';
     const cd = $('#sleepCountdown');
     if (cd) cd.textContent = label;
     const badge = $('#sleepBadge');
@@ -662,12 +719,12 @@
   function updateFavBtn() {
     const t = currentTrack();
     const b = $('#favBtn');
-    if (!t) { b.textContent = '♡'; b.classList.remove('faved'); return; }
+    if (!t) { b.innerHTML = icon('heartOutline'); b.classList.remove('faved'); return; }
     const f = isFav(t.id);
-    b.textContent = f ? '♥' : '♡';
+    b.innerHTML = icon(f ? 'heart' : 'heartOutline');
     b.classList.toggle('faved', f);
     const np = $('#npFavBtn');
-    if (np) np.textContent = f ? '♥ Favorit' : '♡ Favorit';
+    if (np) np.innerHTML = icon(f ? 'heart' : 'heartOutline') + '<span>Favorit</span>';
   }
   $('#favBtn').addEventListener('click', toggleFav);
   $('#npFavBtn').addEventListener('click', toggleFav);
@@ -791,11 +848,11 @@
     btn.style.display = '';
     if (npBtn) npBtn.style.display = '';
     if (downloadedIds.has(t.id)) {
-      btn.disabled = true; btn.textContent = '✓ Diunduh'; st.textContent = 'Tersedia offline';
-      if (npBtn) { npBtn.disabled = true; npBtn.textContent = '✓ Diunduh'; }
+      btn.disabled = true; btn.innerHTML = icon('check') + '<span>Diunduh</span>'; st.textContent = 'Tersedia offline';
+      if (npBtn) { npBtn.disabled = true; npBtn.innerHTML = icon('check') + '<span>Diunduh</span>'; }
     } else {
-      btn.disabled = false; btn.textContent = '⬇ Unduh'; st.textContent = '';
-      if (npBtn) { npBtn.disabled = false; npBtn.textContent = '⬇ Unduh'; }
+      btn.disabled = false; btn.innerHTML = icon('download') + '<span>Unduh</span>'; st.textContent = '';
+      if (npBtn) { npBtn.disabled = false; npBtn.innerHTML = icon('download') + '<span>Unduh</span>'; }
     }
   }
   function removeDownload(id, url) {
@@ -813,7 +870,11 @@
         const div = document.createElement('div');
         div.className = 'track';
         const sizeTxt = r.size ? fmtSize(r.size) : '';
-        div.innerHTML = '<span class="t-num">' + (i + 1) + '</span>' +
+        const dthumb = trackThumb(t);
+        const dart = dthumb
+          ? '<div class="t-art"><img src="' + esc(dthumb) + '" alt="" loading="lazy" onerror="this.remove()"></div>'
+          : '<div class="t-art" style="background:' + coverGradient(t.title) + '">' + esc(coverLetter(t.title)) + '</div>';
+        div.innerHTML = '<span class="t-num">' + (i + 1) + '</span>' + dart +
           '<div class="t-info"><div class="t-title">' + esc(r.title) + '</div>' +
           '<div class="t-sub">' + esc(r.artist) + ' · ' + fmtTime(r.duration) + (sizeTxt ? ' · ' + sizeTxt : '') + '</div></div>' +
           '<span class="dl-badge">OFFLINE</span>';
@@ -909,14 +970,14 @@
     const detail = $('#playlistDetail');
     if (openPlaylistId) { box.hidden = true; detail.hidden = false; return; }
     box.hidden = false; detail.hidden = true;
-    if (!playlists.length) { box.innerHTML = '<p class="hint">Belum ada playlist. Buat playlist lalu tambahkan lagu dari menu ⋯ pada lagu.</p>'; return; }
+    if (!playlists.length) { box.innerHTML = '<p class="hint">Belum ada playlist. Buat playlist lalu tambahkan lagu dari menu titik tiga pada lagu.</p>'; return; }
     box.innerHTML = '';
     playlists.forEach((pl) => {
       const div = document.createElement('div');
       div.className = 'card playlist-card';
-      div.innerHTML = '<div class="pl-art" style="background:' + coverGradient(pl.name) + '">♪</div>' +
+      div.innerHTML = '<div class="pl-art" style="background:' + coverGradient(pl.name) + '">' + icon('note') + '</div>' +
         '<div class="pl-info"><h3>' + esc(pl.name) + '</h3><div class="meta">' + pl.tracks.length + ' lagu</div></div>' +
-        '<div class="row"><button class="btn-small primary pl-play">▶ Putar</button>' +
+        '<div class="row"><button class="btn-small primary pl-play">' + icon('play') + '<span>Putar</span></button>' +
         '<button class="btn-small pl-open">Lihat</button>' +
         '<button class="btn-small pl-del">Hapus</button></div>';
       div.querySelector('.pl-play').addEventListener('click', (ev) => {
@@ -934,7 +995,7 @@
     const box = $('#playlistDetailList');
     if (!pl) { openPlaylistId = null; renderPlaylists(); return; }
     $('#playlistDetailName').textContent = pl.name + ' (' + pl.tracks.length + ' lagu)';
-    if (!pl.tracks.length) { box.innerHTML = '<p class="hint">Playlist ini masih kosong. Tambahkan lagu dari menu ⋯ pada lagu.</p>'; return; }
+    if (!pl.tracks.length) { box.innerHTML = '<p class="hint">Playlist ini masih kosong. Tambahkan lagu dari menu titik tiga pada lagu.</p>'; return; }
     box.innerHTML = '';
     pl.tracks.forEach((r, i) => {
       const t = { id: r.id, title: r.title, artist: r.artist, album: r.album, url: r.url, duration: r.duration, source: r.source, identifier: r.identifier, filename: r.filename, artwork: r.artwork || '', streamUrl: r.streamUrl || '' };
@@ -961,18 +1022,18 @@
   });
   $('#backToPlaylists').addEventListener('click', () => { openPlaylistId = null; renderPlaylists(); });
 
-  /* ---------- menu lagu (⋯): favorit / unduh / tambah ke playlist ---------- */
+  /* ---------- menu lagu: favorit / unduh / tambah ke playlist ---------- */
   let menuTrack = null;
   function openSongMenu(t) {
     menuTrack = t;
     $('#songMenuTitle').textContent = t.title;
     $('#songMenuArtist').textContent = t.artist + (t.album ? ' — ' + t.album : '');
-    $('#songMenuFav').textContent = isFav(t.id) ? '♥ Hapus dari Favorit' : '♡ Tambah ke Favorit';
+    $('#songMenuFav').innerHTML = icon(isFav(t.id) ? 'heart' : 'heartOutline') + '<span>' + (isFav(t.id) ? 'Hapus dari Favorit' : 'Tambah ke Favorit') + '</span>';
     const dlBtn = $('#songMenuDl');
     if (t.source !== 'archive') { dlBtn.style.display = 'none'; }
     else {
       dlBtn.style.display = '';
-      dlBtn.textContent = downloadedIds.has(t.id) ? '✓ Sudah Diunduh' : '⬇ Unduh';
+      dlBtn.innerHTML = downloadedIds.has(t.id) ? icon('check') + '<span>Sudah Diunduh</span>' : icon('download') + '<span>Unduh</span>';
       dlBtn.disabled = downloadedIds.has(t.id);
     }
     const box = $('#songMenuPlaylists');
@@ -1024,7 +1085,7 @@
       '<div class="t-sub">' + esc(t.artist) + (t.duration ? ' · ' + fmtTime(t.duration) : '') + '</div></div>' + dl;
     const menuBtn = document.createElement('button');
     menuBtn.className = 'icon-btn t-menu';
-    menuBtn.textContent = '⋯';
+    menuBtn.innerHTML = icon('more');
     menuBtn.title = 'Opsi lagu';
     menuBtn.addEventListener('click', (ev) => { ev.stopPropagation(); openSongMenu(t); });
     div.appendChild(menuBtn);
@@ -1063,7 +1124,7 @@
     if (thumb) {
       art.innerHTML = '<img src="' + esc(thumb) + '" alt="" onerror="this.remove()">';
     } else {
-      art.textContent = '♪ ' + coverLetter(t.title);
+      art.innerHTML = icon('note');
     }
     syncPlayButtons();
     syncShuffleRepeat();
@@ -1078,13 +1139,16 @@
       if (i === qi) return;
       const div = document.createElement('div');
       div.className = 'track';
-      div.innerHTML = '<span class="t-num">' + (i + 1) + '</span>' +
-        '<div class="t-art" style="background:' + coverGradient(t.title) + '">' + esc(coverLetter(t.title)) + '</div>' +
+      const qthumb = trackThumb(t);
+      const qart = qthumb
+        ? '<div class="t-art"><img src="' + esc(qthumb) + '" alt="" loading="lazy" onerror="this.remove()"></div>'
+        : '<div class="t-art" style="background:' + coverGradient(t.title) + '">' + esc(coverLetter(t.title)) + '</div>';
+      div.innerHTML = '<span class="t-num">' + (i + 1) + '</span>' + qart +
         '<div class="t-info"><div class="t-title">' + esc(t.title) + '</div>' +
         '<div class="t-sub">' + esc(t.artist) + (t.duration ? ' · ' + fmtTime(t.duration) : '') + '</div></div>';
       div.addEventListener('click', () => { qi = i; loadCurrent(true); });
       const del = document.createElement('button');
-      del.className = 'btn-small'; del.textContent = '✕';
+      del.className = 'btn-small'; del.innerHTML = icon('close');
       del.title = 'Hapus dari antrean';
       del.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -1238,8 +1302,8 @@
       card.className = 'featured-card';
       const thumb = trackThumb(t);
       const artHtml = thumb
-        ? '<div class="feat-art"><img src="' + esc(thumb) + '" alt="" loading="lazy" onerror="this.remove()"></div>'
-        : '<div class="feat-art" style="background:' + coverGradient(t.title) + '"><span>♪</span></div>';
+        ? '<div class="feat-art" style="background:' + coverGradient(t.title) + '"><img src="' + esc(thumb) + '" alt="" onerror="this.remove()"></div>'
+        : '<div class="feat-art" style="background:' + coverGradient(t.title) + '">' + icon('note') + '</div>';
       card.innerHTML = artHtml +
         '<div class="feat-title">' + esc(t.title) + '</div>' +
         '<div class="feat-artist">' + esc(t.artist) + '</div>';
@@ -1304,6 +1368,21 @@
       { id: 'sc-user-15090252', name: 'Danilla — Koleksi', desc: '15 lagu · Ada di Sana, Terpaut Oleh Waktu + cover', scUser: 15090252 },
       { id: 'sc-user-23223418', name: 'For Revenge — Koleksi', desc: '5 lagu · Second Chance, Sendiri, Termentahkan', scUser: 23223418 },
       { id: 'sc-user-24112892', name: 'FSTVLST — Koleksi', desc: '9 lagu · Telan Cakrawalanya, Jenny Menarilah', scUser: 24112892 }
+    ] },
+    /* v1.5 — workaround untuk lagu Indo trending yang tidak ada di akun resmi
+       (Barasuara hanya punya preview 30 detik, Nadin Amizah tanpa akun resmi,
+       album penuh The Jansen/Threesixty tidak di akun resmi, .Feast Tarot/Nina
+       hanya re-upload penggemar). Koleksi ini mencari SoundCloud saat dibuka dan
+       memutar hasil pencarian — termasuk unggahan komunitas (terverifikasi playable
+       2026-11-27: tiap pencarian mengembalikan lagu penuh + stream .m3u8 HTTP 200).
+       Dijaga jujur di UI dengan label "via SoundCloud". */
+    { group: '🎵 Indie Indo — via SoundCloud', cols: [
+      { id: 'sc-search-barasuara', name: 'Barasuara — Koleksi', desc: 'via SoundCloud · Terbuang Dalam Waktu, Pancarona', scSearch: 'Barasuara', viaSC: true },
+      { id: 'sc-search-nadin-amizah', name: 'Nadin Amizah — Koleksi', desc: 'via SoundCloud · Bertaut, Sorai, Taruh', scSearch: 'Nadin Amizah', viaSC: true },
+      { id: 'sc-search-the-jansen', name: 'The Jansen — Koleksi Lengkap', desc: 'via SoundCloud · termasuk full album 2023', scSearch: 'The Jansen', viaSC: true },
+      { id: 'sc-search-threesixty', name: 'Threesixty — Koleksi Lengkap', desc: 'via SoundCloud · Dewi, Sampai Nanti, Tak Akan Bisa', scSearch: 'Threesixty', viaSC: true },
+      { id: 'sc-search-feast-tarot', name: '.Feast — Tarot', desc: 'via SoundCloud · Tarot', scSearch: 'Feast Tarot', viaSC: true },
+      { id: 'sc-search-feast-nina', name: '.Feast — Nina', desc: 'via SoundCloud · Nina', scSearch: 'Feast Nina', viaSC: true }
     ] }
   ];
   const COLLECTION_CACHE_TTL = 7 * 24 * 3600 * 1000; // 7 hari
@@ -1321,7 +1400,9 @@
     COLLECTION_GROUPS.forEach((g) => g.cols.forEach((c) => { if (c.id === identifier) col = c; }));
     const loader = (col && col.scUser)
       ? soundcloudUserTracks(col.scUser, 50)
-      : archiveItemTracks(identifier);
+      : (col && col.scSearch)
+        ? soundcloudSearch(col.scSearch, 50)
+        : archiveItemTracks(identifier);
     return loader.then((tracks) => {
       const byTitle = {};
       tracks.forEach((t) => {
@@ -1335,6 +1416,40 @@
       setCollectionCache(cache);
       return deduped;
     });
+  }
+  /* ---------- foto sampul kartu koleksi (v1.5) ----------
+     Archive → thumbnail asli item (services/img). SoundCloud → foto artis (avatar akun)
+     atau sampul lagu pertama bila avatar memakai gambar default. Hasil dicache. */
+  const scArtCache = {};
+  function collectionArtUrl(col) {
+    if (col.scUser || col.scSearch) return null; // dimuat async (butuh API SoundCloud)
+    return 'https://archive.org/services/img/' + encodeURIComponent(col.id);
+  }
+  function loadCollectionCardArt(col, artEl) {
+    if (!col.scUser && !col.scSearch) return;
+    const apply = (url) => {
+      if (!url || !artEl.isConnected) return;
+      artEl.innerHTML = '<img src="' + esc(url) + '" alt="" onerror="this.remove()">' +
+        (col.viaSC ? '<span class="via-tag">via SoundCloud</span>' : '');
+    };
+    if (scArtCache[col.id]) { apply(scArtCache[col.id]); return; }
+    if (col.scUser) {
+      scGetJson(SC_API + '/users/' + col.scUser + '?client_id=' + SC_CLIENT_ID).then((d) => {
+        let av = d && d.avatar_url ? String(d.avatar_url).replace('-large.', '-t500x500.').replace('-large.jpg', '-t500x500.jpg') : '';
+        if (!av || av.indexOf('default_avatar') !== -1) {
+          return soundcloudUserTracks(col.scUser, 5).then((tr) => {
+            const first = tr.find((x) => x.artwork);
+            if (first) { scArtCache[col.id] = first.artwork; apply(first.artwork); }
+          }).catch(() => {});
+        }
+        scArtCache[col.id] = av; apply(av);
+      }).catch(() => {});
+    } else if (col.scSearch) {
+      soundcloudSearch(col.scSearch, 5).then((tr) => {
+        const first = tr.find((x) => x.artwork);
+        if (first) { scArtCache[col.id] = first.artwork; apply(first.artwork); }
+      }).catch(() => {});
+    }
   }
   function renderCollections() {
     const box = $('#collectionsHome');
@@ -1350,11 +1465,17 @@
       g.cols.forEach((c) => {
         const card = document.createElement('div');
         card.className = 'featured-card collection-card';
-        card.innerHTML = '<div class="feat-art" style="background:' + coverGradient(c.name) + '"><span>♪</span></div>' +
+        const artUrl = collectionArtUrl(c);
+        const viaTag = c.viaSC ? '<span class="via-tag">via SoundCloud</span>' : '';
+        const artHtml = artUrl
+          ? '<div class="feat-art" style="background:' + coverGradient(c.name) + '"><img src="' + esc(artUrl) + '" alt="" onerror="this.remove()">' + viaTag + '</div>'
+          : '<div class="feat-art" style="background:' + coverGradient(c.name) + '">' + icon('note') + viaTag + '</div>';
+        card.innerHTML = artHtml +
           '<div class="feat-title">' + esc(c.name) + '</div>' +
           '<div class="feat-artist">' + esc(c.desc) + ' · ketuk untuk buka</div>';
         card.addEventListener('click', () => openCollection(c));
         row.appendChild(card);
+        if (!artUrl) loadCollectionCardArt(c, card.querySelector('.feat-art'));
       });
       box.appendChild(row);
     });
@@ -1366,6 +1487,15 @@
     const detail = $('#collectionDetail');
     detail.hidden = false;
     $('#collectionDetailName').textContent = col.name;
+    const hero = $('#collectionDetailArt');
+    if (hero) {
+      const artUrl = collectionArtUrl(col);
+      hero.style.background = coverGradient(col.name);
+      hero.innerHTML = artUrl
+        ? '<img src="' + esc(artUrl) + '" alt="" onerror="this.remove()">'
+        : icon('note');
+      if (!artUrl) loadCollectionCardArt(col, hero);
+    }
     const st = $('#collectionDetailStatus');
     st.textContent = 'Memuat lagu…';
     const box = $('#collectionDetailList');
@@ -1373,7 +1503,8 @@
     loadCollectionTracks(col.id).then((tracks) => {
       if (openCollectionId !== col.id) return;
       if (!tracks.length) { st.textContent = 'Tidak ada lagu di koleksi ini (mungkin sudah dihapus dari arsip).'; return; }
-      st.textContent = tracks.length + ' lagu — ketuk untuk memutar.';
+      st.textContent = tracks.length + ' lagu — ketuk untuk memutar.' +
+        (col.viaSC ? ' Koleksi via SoundCloud (unggahan komunitas — bisa berubah sewaktu-waktu).' : '');
       tracks.forEach((t, i) => box.appendChild(trackRow(t, tracks, i)));
       markPlayingRow();
     }).catch(() => {
