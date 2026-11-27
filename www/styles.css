@@ -127,3 +127,168 @@ h3 { font-size: 16px; margin: 14px 0 4px; }
   body { max-width: 640px; margin: 0 auto; }
   .player { max-width: 640px; left: 50%; transform: translateX(-50%); }
 }
+
+/* ===== Musikku v1.1 — tambahan: tema terang, Now Playing, beranda, playlist, modal ===== */
+
+/* Tema terang (toggle lewat body.light) */
+body.light {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface2: #e5e5ea;
+  --text: #1c1c1e;
+  --muted: #6c6c70;
+  --border: #d1d1d6;
+}
+body.light .app-header { background: linear-gradient(180deg, #ffffff 0%, #f2f2f7 100%); }
+body.light .tabs { background: #f2f2f7; }
+body.light .player { background: rgba(255, 255, 255, 0.97); }
+body.light .tab-page p, body.light .tab-page li { color: #3a3a3c; }
+body.light .now-playing { background: linear-gradient(180deg, #f2f2f7 0%, #e5e5ea 100%); }
+body.light .modal-card { background: #ffffff; }
+body.light .np-art { box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25); }
+
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.theme-btn { font-size: 24px; margin-top: 4px; flex: 0 0 auto; }
+.section-title { font-size: 19px; margin: 18px 0 10px; }
+.section-title:first-child { margin-top: 4px; }
+.chips.wrap { flex-wrap: wrap; overflow-x: visible; }
+
+/* Animasi masuk yang halus */
+.tab-page.active { animation: fadeSlideIn 0.25s ease; }
+.track { animation: fadeSlideIn 0.25s ease; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.track { transition: background 0.15s ease; }
+.track:active { background: var(--surface2); border-radius: 10px; }
+.btn-primary, .btn-small, .chip, .icon-btn { transition: opacity 0.15s ease, transform 0.1s ease, background 0.2s ease; }
+.btn-primary:active, .btn-small:active { transform: scale(0.97); }
+
+/* Sampul kecil di daftar lagu */
+.t-art {
+  width: 44px; height: 44px; border-radius: 9px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 18px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.t-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.t-menu { font-size: 20px; color: var(--muted); flex: 0 0 auto; }
+.player-art { overflow: hidden; }
+.player-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.player-info { cursor: pointer; }
+
+/* Beranda: kartu featured horizontal */
+.featured-row {
+  display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px;
+  scrollbar-width: none;
+}
+.featured-row::-webkit-scrollbar { display: none; }
+.featured-card {
+  flex: 0 0 150px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px; cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.featured-card:active { transform: scale(0.97); }
+.feat-art {
+  width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 40px; margin-bottom: 8px;
+}
+.feat-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.feat-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feat-artist { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Playlist */
+.playlist-create { display: flex; gap: 8px; margin: 4px 0 12px; }
+.playlist-create input {
+  flex: 1; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 16px; outline: none;
+}
+.playlist-card { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.pl-art {
+  width: 52px; height: 52px; border-radius: 12px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 24px; font-weight: 800;
+}
+.pl-info { flex: 1; min-width: 0; }
+.pl-info h3 { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist-detail-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; flex-wrap: wrap; }
+.playlist-detail-head h2 { margin: 0; flex: 1; min-width: 180px; }
+.row-end { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+/* Now Playing layar penuh */
+.now-playing {
+  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  background: linear-gradient(180deg, #1c1c1e 0%, #000 100%);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  animation: npSlideUp 0.3s ease;
+}
+@keyframes npSlideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.np-top { display: flex; align-items: center; justify-content: space-between; }
+.np-label { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+.np-art-wrap { margin: 18px auto 8px; max-width: 320px; }
+.np-art {
+  width: 100%; aspect-ratio: 1; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 64px; font-weight: 800; overflow: hidden;
+  box-shadow: 0 16px 48px rgba(250, 45, 72, 0.35);
+}
+.np-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.viz-canvas { width: 100%; height: 64px; margin-top: 12px; display: block; }
+.np-title { font-size: 22px; font-weight: 800; text-align: center; margin-top: 6px; }
+.np-artist { font-size: 15px; color: var(--muted); text-align: center; margin-top: 2px; }
+.np-seek { margin-top: 14px; }
+.np-controls { margin-top: 10px; gap: 22px; }
+.np-rows { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.np-row { display: flex; align-items: center; gap: 10px; }
+.np-row label { flex: 0 0 auto; font-size: 14px; color: var(--muted); min-width: 110px; }
+.np-row select {
+  flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 15px;
+}
+.np-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.np-actions { justify-content: center; flex-wrap: wrap; }
+.np-actions .btn-small { padding: 9px 16px; }
+.sleep-countdown { font-size: 14px; color: var(--accent); font-weight: 700; }
+.sleep-badge {
+  background: var(--accent); color: #fff; border-radius: 999px;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; flex: 0 0 auto;
+}
+.np-queue-title { font-size: 17px; margin: 20px 0 6px; }
+.np-queue { padding-bottom: 12px; }
+
+/* Progres unduhan */
+.dl-progress-wrap {
+  margin-top: 8px; height: 18px; background: var(--surface2);
+  border-radius: 999px; overflow: hidden; position: relative;
+}
+.dl-progress-bar {
+  height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #ff9a5c);
+  border-radius: 999px; transition: width 0.2s ease;
+}
+.dl-progress-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text);
+}
+
+/* Modal menu lagu */
+.modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.modal[hidden] { display: none; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.modal-card {
+  position: relative; width: 100%; max-width: 640px;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  animation: npSlideUp 0.25s ease;
+}
+.modal-title { font-size: 18px; font-weight: 800; }
+.modal-sub { font-size: 14px; color: var(--muted); margin: 2px 0 12px; }
+.modal-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.modal-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+.block-btn { display: block; width: 100%; margin-bottom: 6px; text-align: left; }
+.block-btn:disabled { opacity: 0.45; }
+#songMenuPlaylists { margin-bottom: 8px; }
