@@ -41,12 +41,25 @@
 
 <main id="content">
   <section id="tab-beranda" class="tab-page active">
-    <h2 class="section-title">✨ Pilihan Untukmu</h2>
-    <div id="featuredRow" class="featured-row"></div>
-    <h2 class="section-title">🎧 Jelajahi Genre</h2>
-    <div class="chips wrap" id="genreChipsHome"></div>
-    <h2 class="section-title">🕘 Baru Diputar</h2>
-    <div id="homeRecent" class="list"></div>
+    <div id="berandaHome">
+      <h2 class="section-title">✨ Pilihan Untukmu</h2>
+      <div id="featuredRow" class="featured-row"></div>
+      <h2 class="section-title">🎵 Koleksi Pilihan</h2>
+      <div id="collectionsHome"></div>
+      <p class="hint">Tidak ketemu lagunya di koleksi? Kotak pencarian di atas mencari seluruh arsip — lagu Indo apa pun yang ada di sana, dari yang terkenal sampai yang kurang dikenal, bisa dicari lewat pencarian.</p>
+      <h2 class="section-title">🎧 Jelajahi Genre</h2>
+      <div class="chips wrap" id="genreChipsHome"></div>
+      <h2 class="section-title">🕘 Baru Diputar</h2>
+      <div id="homeRecent" class="list"></div>
+    </div>
+    <div id="collectionDetail" hidden>
+      <div class="playlist-detail-head">
+        <button id="backToCollections" class="btn-small">← Semua Koleksi</button>
+        <h2 id="collectionDetailName"></h2>
+      </div>
+      <div id="collectionDetailStatus" class="status"></div>
+      <div id="collectionDetailList" class="list"></div>
+    </div>
   </section>
 
   <section id="tab-jelajah" class="tab-page">
@@ -97,10 +110,16 @@
     <p>Musikku adalah pemutar musik gratis untuk iPhone. Bisa memutar lagu <strong>full</strong> (bukan cuplikan 30 detik) dari arsip musik bebas, mengunduhnya untuk didengar offline, dan memutar file musik dari perangkatmu.</p>
     <h3>Sumber lagu online</h3>
     <p>Katalog online berasal dari <strong>Internet Archive</strong> (archive.org) — jutaan rekaman musik bebas, Creative Commons, dan rekaman live. Lagu pop arus utama yang masih berhak cipta <strong>tidak</strong> tersedia gratis di sini; untuk lagu seperti itu, gunakan tombol Impor File dan putar koleksimu sendiri.</p>
+    <p>Koleksi Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, dan Reggae Indo adalah kompilasi lagu Indonesia yang diunggah pengguna ke Internet Archive — lagunya bisa diputar full, tetapi ketersediaannya mengikuti arsip dan dapat berubah sewaktu-waktu.</p>
     <h3>Offline</h3>
     <ul>
       <li><strong>Unduh</strong> — tekan tombol unduh pada sebuah lagu. Lagu tersimpan di perangkat dan tetap bisa diputar saat tidak ada internet.</li>
       <li><strong>File Saya</strong> — impor file MP3/M4A/OGG dari perangkatmu.</li>
+    </ul>
+    <h3>Fitur baru di v1.2</h3>
+    <ul>
+      <li>Koleksi Pilihan di Beranda: Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo — dari artis terkenal (Endank Soekamti, Superglad, Juicy Luicy, Pee Wee Gaskins, Tipe-X, Tony Q) sampai kompilasi lagu-lagu yang kurang dikenal. Ketuk kartu koleksi untuk melihat daftar lagunya.</li>
+      <li>Kotak pencarian mencari seluruh arsip — lagu Indo apa pun yang ada di sana bisa dicari lewat pencarian.</li>
     </ul>
     <h3>Fitur baru di v1.1</h3>
     <ul>
@@ -113,7 +132,7 @@
     </ul>
     <h3>Privasi</h3>
     <p>Semua data (favorit, unduhan, file, riwayat) tersimpan hanya di perangkatmu. Tidak ada akun, tidak ada pelacakan.</p>
-    <p class="version">Musikku v1.1 — PWA + Capacitor (iOS)</p>
+    <p class="version">Musikku v1.2 — PWA + Capacitor (iOS)</p>
   </section>
 </main>
 
