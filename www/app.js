@@ -1,4 +1,4 @@
-/* Musikku v1.5 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
+/* Musikku v1.6 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
    Fitur: Now Playing layar penuh + visualizer simulasi, playlist, riwayat, sleep timer,
    kecepatan putar, manajer unduhan, beranda, tema terang/gelap, Media Session API,
    Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo), SoundCloud.
@@ -11,7 +11,11 @@
    v1.5: perbaikan ganti lagu saat sedang memutar (pause + load + play aman + token urutan
    resolve SoundCloud); foto asli di kartu koleksi & baris lagu; ikon pemain SVG kustom +
    tema hangat; koleksi workaround via SoundCloud untuk lagu Indo trending yang tidak ada
-   di akun resmi (Barasuara, Nadin Amizah, The Jansen, Threesixty, .Feast Tarot/Nina). */
+   di akun resmi (Barasuara, Nadin Amizah, The Jansen, Threesixty, .Feast Tarot/Nina).
+   v1.6: SEMUA koleksi Archive luar dihapus — konten kurasi kini hanya Indonesia (Archive +
+   SoundCloud) + lagu luar yang sedang trend di TikTok/Instagram & koleksi artis luar,
+   semuanya via SoundCloud (koleksi trending memakai daftar ID track terverifikasi;
+   koleksi artis memakai pencarian SoundCloud dinamis). */
 (function () {
   'use strict';
 
@@ -398,6 +402,23 @@
     return scGetJson(url).then((d) => {
       const list = Array.isArray(d) ? d : (d.collection || []);
       return list.filter((t) => t && t.media && t.media.transcodings && t.media.transcodings.length && t.duration)
+        .map(mapSoundCloudTrack).filter(Boolean);
+    });
+  }
+  /* Daftar track SoundCloud dari daftar ID yang sudah terverifikasi (dipakai koleksi
+     trending TikTok/Instagram v1.6 — tiap ID dicek saat build: pencarian mengembalikan
+     upload lagu penuh dan stream-nya ter-resolve ke URL yang menjawab HTTP 200).
+     Urutan ID dipertahankan seperti di daftar. */
+  function soundcloudTracksByIds(ids) {
+    const url = SC_API + '/tracks?' + new URLSearchParams({
+      ids: ids.join(','), client_id: SC_CLIENT_ID
+    }).toString();
+    return scGetJson(url).then((d) => {
+      const list = Array.isArray(d) ? d : (d.collection || []);
+      const byId = {};
+      list.forEach((t) => { if (t) byId[t.id] = t; });
+      return ids.map((id) => byId[id])
+        .filter((t) => t && t.media && t.media.transcodings && t.media.transcodings.length && t.duration)
         .map(mapSoundCloudTrack).filter(Boolean);
     });
   }
@@ -1184,13 +1205,11 @@
   /* (Equalizer dihapus di v1.3 — butuh Web Audio, yang mematikan pemutaran latar belakang.) */
 
   /* ---------- search / browse ---------- */
-  /* Genre di Beranda — hanya genre Amerika + Indonesia (v1.4: Klasik/Elektronik/Akustik
-     dihapus karena lintas negara; Reggae dibatasi ke Reggae Indo). */
+  /* Genre di Beranda — hanya genre Indonesia (v1.6: semua genre Archive luar dihapus). */
   const GENRES = [
-    { label: 'Jazz Amerika', q: 'jazz' }, { label: 'Rock Amerika', q: 'rock' }, { label: 'Pop Amerika', q: 'pop' },
-    { label: 'Country Amerika', q: 'country' }, { label: 'Blues Amerika', q: 'blues' }, { label: 'Folk Amerika', q: 'folk' },
-    { label: 'Gospel Amerika', q: 'gospel' }, { label: 'Live Amerika', q: 'collection:(etree)' },
-    { label: 'Dangdut', q: 'dangdut' }, { label: 'Reggae Indo', q: 'reggae indonesia' }
+    { label: 'Pop Indo', q: 'pop indonesia' },
+    { label: 'Dangdut', q: 'dangdut' }, { label: 'Reggae Indo', q: 'reggae indonesia' },
+    { label: 'Gamelan', q: 'gamelan' }
   ];
   function makeGenreChip(g) {
     const b = document.createElement('button');
@@ -1225,9 +1244,8 @@
 
   /* ---------- SoundCloud: cari & putar ---------- */
   const SC_CHIPS = [
-    { label: 'Pop Amerika', q: 'american pop' },
-    { label: 'Jazz Amerika', q: 'american jazz' },
-    { label: 'Blues Amerika', q: 'american blues' },
+    { label: 'Trending TikTok', q: 'tiktok viral' },
+    { label: 'Trending IG', q: 'instagram reels viral' },
     { label: 'Dangdut', q: 'dangdut' },
     { label: 'Pop Indo', q: 'pop indonesia' },
     { label: 'Reggae Indo', q: 'reggae indonesia' }
@@ -1277,8 +1295,8 @@
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  /* ---------- featured (verified full tracks, Amerika) + beranda ---------- */
-  const FEATURED = ['78T-LIST-0037', 'johnny-cash-american-iii-solitary-man-cd-rip', 'ella-und-louis-ella-und-louis-singen-aus-porgy-and-bess'];
+  /* ---------- featured (verified full tracks, Indonesia) + beranda ---------- */
+  const FEATURED = ['TopLaguPopTerbaru', 'KumpulanLaguPopIndonesia', 'LaguPopLawasTerbaik'];
   function loadFeatured() {
     setStatus('Memuat lagu pilihan…');
     Promise.all(FEATURED.map((id) => archiveItemTracks(id).catch(() => [])))
@@ -1312,9 +1330,11 @@
     });
   }
 
-  /* ---------- Koleksi Pilihan (Indo, Amerika, Indie Indo Kekinian) ----------
-     Kompilasi lagu Indonesia & Amerika dari Internet Archive, plus koleksi Indie Indo
-     dari akun SoundCloud resmi tiap band (scUser). Semua kurasi hanya Amerika + Indonesia.
+  /* ---------- Koleksi Pilihan (Indo, Indie Indo Kekinian, Trending Luar) ----------
+     Kompilasi lagu Indonesia dari Internet Archive, plus koleksi Indie Indo
+     dari akun SoundCloud resmi tiap band (scUser) dan koleksi workaround via
+     pencarian SoundCloud (scSearch). Lagu luar HANYA yang sedang trend di
+     TikTok/Instagram dan koleksi artis luar — semuanya via SoundCloud, bukan Archive.
      Kartu koleksi → daftar lagu → ketuk untuk memutar (player & antrean yang sama). */
   const COLLECTION_GROUPS = [
     { group: '🇮🇩 Pop Indo', cols: [
@@ -1342,22 +1362,6 @@
       { id: 'TopSongRegeSka', name: 'Top Song Rege Ska', desc: '7 lagu rege/ska Indo' },
       { id: 'LaguReggae', name: 'Lagu Reggae', desc: '259 lagu reggae' }
     ] },
-    { group: '🇺🇸 Jazz Amerika', cols: [
-      { id: 'ella-und-louis-ella-und-louis-singen-aus-porgy-and-bess', name: 'Ella Fitzgerald & Louis Armstrong — Porgy and Bess', desc: '10 lagu · Ella & Louis' },
-      { id: '11-duke-ellington-rare-broadcasts-1951-musidisc-ja-5209', name: 'Duke Ellington — Rare Broadcasts 1951', desc: '11 lagu · Duke Ellington' },
-      { id: '07-chick-webb-if-i-didnt-care', name: 'Count Basie & Chick Webb — Southland Cafe 1939-40', desc: '10 lagu · Basie, Webb, Ella' },
-      { id: 'miles-davis-aura_202212', name: 'Miles Davis — AURA', desc: '10 lagu · Miles Davis' },
-      { id: '78T-LIST-0037', name: 'Playlist American Jazz', desc: '19 lagu jazz Amerika' }
-    ] },
-    { group: '🎸 Blues & Folk Amerika', cols: [
-      { id: '78_ham-eggs_lead-belly-woody-guthrie-cisco-houston_gbia8005012', name: 'Lead Belly — Midnight Special', desc: '6 lagu · Lead Belly' },
-      { id: '78_hard-travelling_woody-guthrie-woody-guthrie_gbia8004901', name: 'Woody Guthrie — Ballads from the Dust Bowl', desc: '6 lagu · Woody Guthrie' }
-    ] },
-    { group: '🤠 Country Amerika', cols: [
-      { id: 'johnny-cash-american-iii-solitary-man-cd-rip', name: 'Johnny Cash — American III: Solitary Man', desc: '14 lagu · Johnny Cash' },
-      { id: 'straight-to-hell-deluxe-edition', name: 'Hank Williams III — Straight to Hell (Deluxe)', desc: '15 lagu · Hank Williams III' },
-      { id: '2019-10-08-52', name: 'Bastard Sons of Johnny Cash — Live 2019', desc: '65 lagu live · Americana' }
-    ] },
     { group: '🎵 Indie Indo Kekinian', cols: [
       { id: 'sc-user-896154106', name: 'Perunggu — Koleksi Lengkap', desc: '28 lagu · Memorandum, Dalam Dinamika, Pendar', scUser: 896154106 },
       { id: 'sc-user-41827465', name: 'Fourtwnty — Koleksi', desc: '14 lagu · Fana Merah Jambu, Aku Tenang, Hitam Putih', scUser: 41827465 },
@@ -1383,6 +1387,29 @@
       { id: 'sc-search-threesixty', name: 'Threesixty — Koleksi Lengkap', desc: 'via SoundCloud · Dewi, Sampai Nanti, Tak Akan Bisa', scSearch: 'Threesixty', viaSC: true },
       { id: 'sc-search-feast-tarot', name: '.Feast — Tarot', desc: 'via SoundCloud · Tarot', scSearch: 'Feast Tarot', viaSC: true },
       { id: 'sc-search-feast-nina', name: '.Feast — Nina', desc: 'via SoundCloud · Nina', scSearch: 'Feast Nina', viaSC: true }
+    ] },
+    /* v1.6 — lagu luar yang sedang trend di TikTok/Instagram (Nov 2026) + koleksi
+       artis luar. SEMUA via SoundCloud (bukan Archive). Koleksi trending memakai
+       daftar ID track yang sudah terverifikasi satu per satu saat build
+       (pencarian mengembalikan upload lagu penuh + stream ter-resolve HTTP 200);
+       koleksi artis memakai pencarian SoundCloud dinamis (scSearch). Lagu-lagu ini
+       adalah unggahan komunitas/remix — ditandai "via SoundCloud" di UI.
+       Catatan verifikasi: query "My Chemical Romance" hanya mengembalikan track
+       HLS terenkripsi (tidak bisa diputar aplikasi) — koleksi MCR memakai query
+       "MCR"; query "Djo" didominasi artis Prancis "Mauvais Djo" — koleksi Djo
+       memakai query "Djo Joe Keery". */
+    { group: '🔥 Trending TikTok', cols: [
+      { id: 'sc-trending-tiktok', name: 'Trending TikTok — Nov 2026', desc: 'via SoundCloud · 18 lagu luar yang lagi viral di TikTok', scTracks: [2433571311, 2441334870, 2420080329, 6736771, 2129562687, 1937424026, 2061241564, 2058172076, 1964746283, 2416558491, 224549764, 2426518062, 183043927, 2445146406, 230947125, 2160643491, 2408342127, 2042648552], viaSC: true }
+    ] },
+    { group: '📸 Trending Instagram', cols: [
+      { id: 'sc-trending-ig', name: 'Trending Instagram — Nov 2026', desc: 'via SoundCloud · 18 lagu luar yang lagi viral di Reels', scTracks: [1960063299, 2307966296, 1103041795, 2441758293, 2337663461, 2383817022, 513864354, 2030907064, 2424709509, 62682267, 124822516, 418803480, 2012875331, 2439986583, 2441837925, 2409419199, 2433571311, 1237165465], viaSC: true }
+    ] },
+    { group: '🎤 Artis Luar — via SoundCloud', cols: [
+      { id: 'sc-search-billie-eilish', name: 'Billie Eilish — Koleksi', desc: 'via SoundCloud · Ocean Eyes, Six Feet Under, bitches broken hearts', scSearch: 'Billie Eilish', viaSC: true },
+      { id: 'sc-search-avenged-sevenfold', name: 'Avenged Sevenfold — Koleksi', desc: 'via SoundCloud · Gunslinger, So Far Away, Dear God', scSearch: 'Avenged Sevenfold', viaSC: true },
+      { id: 'sc-search-djo', name: 'Djo — Koleksi', desc: 'via SoundCloud · End of Beginning, Chateau, Flash Mountain', scSearch: 'Djo Joe Keery', viaSC: true },
+      { id: 'sc-search-mcr', name: 'My Chemical Romance — Koleksi', desc: 'via SoundCloud · Welcome to the Black Parade, Helena, Teenagers', scSearch: 'MCR', viaSC: true },
+      { id: 'sc-search-bmth', name: 'Bring Me The Horizon — Koleksi', desc: 'via SoundCloud · Sleepwalking, Can You Feel My Heart, Throne', scSearch: 'Bring Me The Horizon', viaSC: true }
     ] }
   ];
   const COLLECTION_CACHE_TTL = 7 * 24 * 3600 * 1000; // 7 hari
@@ -1398,11 +1425,13 @@
     }
     let col = null;
     COLLECTION_GROUPS.forEach((g) => g.cols.forEach((c) => { if (c.id === identifier) col = c; }));
-    const loader = (col && col.scUser)
-      ? soundcloudUserTracks(col.scUser, 50)
-      : (col && col.scSearch)
-        ? soundcloudSearch(col.scSearch, 50)
-        : archiveItemTracks(identifier);
+    const loader = (col && col.scTracks)
+      ? soundcloudTracksByIds(col.scTracks)
+      : (col && col.scUser)
+        ? soundcloudUserTracks(col.scUser, 50)
+        : (col && col.scSearch)
+          ? soundcloudSearch(col.scSearch, 50)
+          : archiveItemTracks(identifier);
     return loader.then((tracks) => {
       const byTitle = {};
       tracks.forEach((t) => {
@@ -1422,11 +1451,11 @@
      atau sampul lagu pertama bila avatar memakai gambar default. Hasil dicache. */
   const scArtCache = {};
   function collectionArtUrl(col) {
-    if (col.scUser || col.scSearch) return null; // dimuat async (butuh API SoundCloud)
+    if (col.scUser || col.scSearch || col.scTracks) return null; // dimuat async (butuh API SoundCloud)
     return 'https://archive.org/services/img/' + encodeURIComponent(col.id);
   }
   function loadCollectionCardArt(col, artEl) {
-    if (!col.scUser && !col.scSearch) return;
+    if (!col.scUser && !col.scSearch && !col.scTracks) return;
     const apply = (url) => {
       if (!url || !artEl.isConnected) return;
       artEl.innerHTML = '<img src="' + esc(url) + '" alt="" onerror="this.remove()">' +
@@ -1446,6 +1475,11 @@
       }).catch(() => {});
     } else if (col.scSearch) {
       soundcloudSearch(col.scSearch, 5).then((tr) => {
+        const first = tr.find((x) => x.artwork);
+        if (first) { scArtCache[col.id] = first.artwork; apply(first.artwork); }
+      }).catch(() => {});
+    } else if (col.scTracks) {
+      soundcloudTracksByIds(col.scTracks).then((tr) => {
         const first = tr.find((x) => x.artwork);
         if (first) { scArtCache[col.id] = first.artwork; apply(first.artwork); }
       }).catch(() => {});
