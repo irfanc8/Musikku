@@ -26,15 +26,15 @@ jobs:
       - name: Sync web assets
         run: npx cap sync
 
-      - name: Set app version to 1.5
+      - name: Set app version to 1.6
         run: |
           python3 - <<'EOF'
           import re
           p = "ios/App/App.xcodeproj/project.pbxproj"
           s = open(p).read()
-          s2 = re.sub(r"MARKETING_VERSION = [^;]+;", "MARKETING_VERSION = 1.5;", s)
+          s2 = re.sub(r"MARKETING_VERSION = [^;]+;", "MARKETING_VERSION = 1.6;", s)
           open(p, "w").write(s2)
-          print("MARKETING_VERSION set to 1.5")
+          print("MARKETING_VERSION set to 1.6")
           EOF
 
       - name: Enable background audio
