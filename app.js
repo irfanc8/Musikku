@@ -1,4 +1,4 @@
-/* Musikku v1.6 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
+/* Musikku v1.7 — pemutar musik online (Internet Archive + SoundCloud) + offline (unduhan & file lokal)
    Fitur: Now Playing layar penuh + visualizer simulasi, playlist, riwayat, sleep timer,
    kecepatan putar, manajer unduhan, beranda, tema terang/gelap, Media Session API,
    Koleksi Pilihan (Pop Indo, Pop Punk / Skate Punk Indo, Ska Indo, Reggae Indo), SoundCloud.
@@ -15,7 +15,12 @@
    v1.6: SEMUA koleksi Archive luar dihapus — konten kurasi kini hanya Indonesia (Archive +
    SoundCloud) + lagu luar yang sedang trend di TikTok/Instagram & koleksi artis luar,
    semuanya via SoundCloud (koleksi trending memakai daftar ID track terverifikasi;
-   koleksi artis memakai pencarian SoundCloud dinamis). */
+   koleksi artis memakai pencarian SoundCloud dinamis).
+   v1.7: TEMA SAJA — tampilan dirombak gaya Apple Music (terang, bersih, aksen merah,
+   judul besar, hero "Viral di TikTok & Reels" di Beranda yang membuka koleksi Trending
+   TikTok). Isi lagu & semua perilaku SAMA seperti v1.6. Tema gelap hangat (v1.5)
+   dipertahankan sebagai pilihan toggle (kunci tema baru: musikku_theme_v17, default
+   terang — pengguna lama v1.6 mendapat tampilan baru saat pertama buka v1.7). */
 (function () {
   'use strict';
 
@@ -126,16 +131,16 @@
   let playlists = store.get('musikku_playlists', []);
   let openPlaylistId = null;
 
-  /* ---------- tema terang / gelap ---------- */
+  /* ---------- tema terang / gelap (v1.7: default terang gaya Apple Music) ---------- */
   function applyTheme() {
-    const theme = store.get('musikku_theme', 'dark');
-    document.body.classList.toggle('light', theme === 'light');
+    const theme = store.get('musikku_theme_v17', 'light');
+    document.body.classList.toggle('dark', theme === 'dark');
     const btn = $('#themeToggle');
     if (btn) btn.innerHTML = icon(theme === 'light' ? 'sun' : 'moon');
   }
   function toggleTheme() {
-    const cur = store.get('musikku_theme', 'dark');
-    store.set('musikku_theme', cur === 'light' ? 'dark' : 'light');
+    const cur = store.get('musikku_theme_v17', 'light');
+    store.set('musikku_theme_v17', cur === 'light' ? 'dark' : 'light');
     applyTheme();
   }
 
@@ -1557,6 +1562,18 @@
 
   /* ---------- tema ---------- */
   $('#themeToggle').addEventListener('click', toggleTheme);
+
+  /* ---------- hero trending (v1.7, gaya mockup Apple Music) ---------- */
+  const hero = $('#trendingHero');
+  if (hero) {
+    const openTrending = () => {
+      let col = null;
+      COLLECTION_GROUPS.forEach((g) => g.cols.forEach((c) => { if (c.id === 'sc-trending-tiktok') col = c; }));
+      if (col) openCollection(col);
+    };
+    hero.addEventListener('click', openTrending);
+    hero.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTrending(); } });
+  }
 
   /* ---------- service worker ---------- */
   if ('serviceWorker' in navigator) {
